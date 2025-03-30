@@ -5,7 +5,7 @@
 
 # Scribe
 
-Scribe is a RESTful API server that brings component-based architecture to data modeling. Just as modern frontend frameworks like Vue and Flight organize their applications into components, Scribe organizes your data into logical, self-contained components and subcomponents that can be composed and related to each other.
+Scribe is a RESTful API server that brings component-based architecture to data modeling. Just as modern frontend frameworks like Vue and React organize their applications into components, Scribe organizes your data into logical, self-contained components and subcomponents that can be composed and related to each other.
 
 ## Project Structure
 
