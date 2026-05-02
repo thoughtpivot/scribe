@@ -1,6 +1,6 @@
 import { Signer } from "@aws-sdk/rds-signer"
 import { RedisClientType } from "@redis/client"
-import Ajv from "ajv"
+import { Ajv, ValidateFunction } from "ajv"
 import { diff_match_patch } from "diff-match-patch"
 import dotenv from "dotenv"
 import express from "express"
@@ -88,7 +88,7 @@ const argv = yargs(hideBin(process.argv))
 
 interface ComponentSchema {
     schema: object
-    validator: Ajv.ValidateFunction
+    validator: ValidateFunction
 }
 
 const dbConnectionConfig = async () => {
@@ -219,7 +219,7 @@ export async function createServer(schemaOverride: any = undefined): Promise<Ser
             return
         }
 
-        db.createSingle(`${req.params.component}_${req.params.subcomponent}`, req.body, componentSchema.schema).then((result) => {
+        db.createSingle(`${req.params.component}_${req.params.subcomponent}`, req.body as JSON, componentSchema.schema).then((result) => {
             res.send(result)
         })
         // send response success or fail
@@ -238,7 +238,7 @@ export async function createServer(schemaOverride: any = undefined): Promise<Ser
             return
         }
 
-        db.createSingle(req.params.component, req.body, componentSchema.schema).then((result) => {
+        db.createSingle(req.params.component, req.body as JSON, componentSchema.schema).then((result) => {
             res.send(result)
         })
 
@@ -309,9 +309,11 @@ export async function createServer(schemaOverride: any = undefined): Promise<Ser
         }
 
         // update id if it exists
-        db.updateSingle(`${req.params.component}_${req.params.subcomponent}`, req.params.id, req.body, componentSchema.schema, res).then((result) => {
-            res.send(result)
-        })
+        db.updateSingle(`${req.params.component}_${req.params.subcomponent}`, req.params.id, req.body as JSON, componentSchema.schema, res).then(
+            (result) => {
+                res.send(result)
+            }
+        )
     })
 
     scribe.put("/:component/:id", async (req, res, next) => {
@@ -329,7 +331,7 @@ export async function createServer(schemaOverride: any = undefined): Promise<Ser
         }
 
         // update id if it exists
-        db.updateSingle(req.params.component, req.params.id, req.body, componentSchema.schema, res).then((result) => {
+        db.updateSingle(req.params.component, req.params.id, req.body as JSON, componentSchema.schema, res).then((result) => {
             res.send(result)
         })
     })
@@ -474,7 +476,7 @@ class DB {
                         schema: schemaObject,
                         validator
                     }
-                } catch (error) {
+                } catch {
                     console.log(`Cached schema for ${component} is corrupt, querying for it again`)
                 }
             } else {
@@ -583,7 +585,6 @@ class DB {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public async createSingle(component: string, data: JSON, schema: object): Promise<any> {
         // make table and record for info sent
         const queryData = this.formatQueryData(data, schema)
@@ -648,7 +649,7 @@ class DB {
                         let filterValue
                         try {
                             filterValue = JSON.parse(value)
-                        } catch (error) {
+                        } catch {
                             filterValue = value
                         }
 
@@ -680,7 +681,7 @@ class DB {
                 let rawFilter = undefined
                 try {
                     rawFilter = typeof userFilter === "string" ? JSON.parse(userFilter) : userFilter
-                } catch (error) {
+                } catch {
                     res.status(400)
                     return "Failed to parse filter"
                 }
@@ -729,7 +730,7 @@ class DB {
                 let timeMachine: any
                 try {
                     timeMachine = JSON.parse(timeMachineQuery)
-                } catch (error) {
+                } catch {
                     timeMachine = timeMachineQuery
                 }
 
@@ -868,7 +869,7 @@ class DB {
                         const nextVersion = dmp.patch_apply(dmp.patch_fromText(rawHistory.patches[i]), currentVersion)[0]
                         oldVersions.push(JSON.parse(nextVersion))
                         currentVersion = nextVersion
-                    } catch (err) {
+                    } catch {
                         continue
                     }
                 }

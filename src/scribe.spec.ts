@@ -1,5 +1,6 @@
-import chai from "chai"
-import { assert, expect } from "chai"
+import "chai-http"
+
+import * as chaiMod from "chai"
 import chaiHttp from "chai-http"
 import { DateTime } from "luxon"
 import { createRequire } from "module"
@@ -7,7 +8,13 @@ import { Server } from "net"
 
 import { createServer, tryCreateDb } from "./scribe.js"
 
-chai.use(chaiHttp)
+chaiMod.use(chaiHttp)
+
+const chai = chaiMod as unknown as Chai.ChaiStatic
+const { assert, expect } = chaiMod
+
+/** chai-http exposes request as callable at runtime; DefinitelyTyped omits call signature */
+const serve = chai.request as unknown as (url: string) => ChaiHttp.Agent
 
 const baseEndPoint = "http://localhost:1337"
 let server: Server | undefined
@@ -42,18 +49,18 @@ after(function (done: any) {
 
 describe("Scribe", function () {
     it("Checks that server is running", function (done: any) {
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/")
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.equal(res.status, 200)
                 done()
             })
     })
 
     it("DEL component table", function (done: any) {
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .del("/testComponent")
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.equal(res.status, 200)
                 expect(res.body).to.eql([])
                 done()
@@ -61,9 +68,9 @@ describe("Scribe", function () {
     })
 
     it("DEL subcomponent table", function (done: any) {
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .del("/testComponent/sub")
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.equal(res.status, 200)
                 expect(res.body).to.eql([])
                 done()
@@ -96,10 +103,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .post("/testComponent")
             .send(request)
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -120,9 +127,9 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -143,10 +150,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .query({ filter: { created_by: [2] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -167,10 +174,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .query({ filter2: { id: ["is one of", [1]] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -191,10 +198,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .query({ filter2: { "data.something": ["is one of", "somethingstring"] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -215,10 +222,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .query({ filter2: { "data.ids": ["contains", [3]] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -226,10 +233,10 @@ describe("Scribe", function () {
 
     it("GET all entries with query filter expect none", function (done: any) {
         const expectedResponse: any[] = []
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .send({ filter: { created_by: [3] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -250,10 +257,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .send({ filter: { created_by: [2] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -274,10 +281,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .send({ filter: { "data.something": "somethingstring" } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -285,10 +292,10 @@ describe("Scribe", function () {
 
     it("GET all entries with body filter expect none", function (done: any) {
         const expectedResponse: any[] = []
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/testComponent/all")
             .query({ filter: { created_by: [3] } })
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -296,9 +303,9 @@ describe("Scribe", function () {
 
     it("GET from table that doesn't exist should return empty array", function (done: any) {
         const expectedResponse: any[] = []
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .get("/someTableThatDoesntExist/all")
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -332,10 +339,10 @@ describe("Scribe", function () {
             }
         ]
 
-        chai.request(baseEndPoint)
+        serve(baseEndPoint)
             .put("/testComponent/1")
             .send(request)
-            .end((err, res) => {
+            .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
             })
@@ -377,10 +384,10 @@ describe("Scribe", function () {
                 }
             ]
 
-            chai.request(baseEndPoint)
+            serve(baseEndPoint)
                 .put("/testComponent/1")
                 .send(request)
-                .end((err, res) => {
+                .end((err: unknown, res: ChaiHttp.Response) => {
                     assert.deepEqual(res.body, expectedResponse)
                     done()
                 })

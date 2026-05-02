@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import cluster from "cluster"
+import cluster from "node:cluster"
+
 import os from "os"
 
 import { createServer, tryCreateDb } from "./scribe.js"
