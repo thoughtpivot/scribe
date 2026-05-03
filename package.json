@@ -1,8 +1,13 @@
 {
     "name": "@thoughtpivot/scribe",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "description": "Database modeling services (ThoughtPivot technology).",
     "exports": "./dist/scribe.cli.js",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
     "type": "module",
     "engines": {
         "node": ">=18.19.0"

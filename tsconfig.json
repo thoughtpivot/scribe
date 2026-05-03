@@ -12,5 +12,5 @@
         "skipLibCheck": true,
         "types": ["node", "mocha"]
     },
-    "files": ["./src/scribe.cli.ts", "./src/scribe.spec.ts"]
+    "files": ["./src/scribe.cli.ts"]
 }
