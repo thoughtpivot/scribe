@@ -1,6 +1,7 @@
 import { Signer } from "@aws-sdk/rds-signer"
 import { RedisClientType } from "@redis/client"
 import { Ajv, ValidateFunction } from "ajv"
+import formatsPlugin from "ajv-formats"
 import { diff_match_patch } from "diff-match-patch"
 import dotenv from "dotenv"
 import express from "express"
@@ -181,6 +182,7 @@ export async function createServer(schemaOverride: any = undefined): Promise<Ser
     }
 
     const db = new DB(postgresDb, schemaOverride)
+    await db.initRedis()
     // NOTE this is a super dangerous route, scribe is meant to only be listening inside a private vpc
     scribe.post("/sql", (req, res, next) => {
         if (typeof req.body.query !== "string") return res.status(400).send("Missing query property.")
@@ -399,20 +401,26 @@ export async function createServer(schemaOverride: any = undefined): Promise<Ser
         res.send()
     })
 
-    scribe.all("*", (req, res, next) => {
+    scribe.use((req, res) => {
         res.status(400).send("Unhandled Route")
     })
 
-    const scribeServer = scribe.listen(argv.port, () => {
-        console.log(
-            "Scribe - Process: %sd, Name: %s, Home: %s, Port: %d, Mode: %s, DB Name: %s",
-            process.pid,
-            argv.name,
-            argv.home,
-            argv.port,
-            argv.mode,
-            argv.dbName
-        )
+    const scribeServer = await new Promise<Server>((resolve, reject) => {
+        const s = scribe.listen(argv.port, () => {
+            console.log(
+                "Scribe - Process: %sd, Name: %s, Home: %s, Port: %d, Mode: %s, DB Name: %s",
+                process.pid,
+                argv.name,
+                argv.home,
+                argv.port,
+                argv.mode,
+                argv.dbName
+            )
+
+            resolve(s)
+        })
+
+        s.on("error", reject)
     })
 
     scribeServer.on("close", () => {
@@ -427,9 +435,12 @@ class DB {
     private defaultSchema: object
     private redisError = false
     private schemaCache: RedisClientType
+    /** When set, `createServer(schema)` was called with a concrete schema; skip Redis + HTTP schema services. */
+    private readonly schemaSourceIsExplicit: boolean
 
     constructor(db: pgPromise.IDatabase<Record<string, never>>, schemaOverride: any = undefined) {
         this.db = db
+        this.schemaSourceIsExplicit = schemaOverride !== undefined
         this.defaultSchema = schemaOverride ?? require("./default.table.schema.json")
         // @ts-ignore this type sucks
         this.schemaCache = createClient({
@@ -446,15 +457,22 @@ class DB {
             console.log("Failed to connect to Redis database")
             this.redisError = true
         })
+    }
 
-        this.schemaCache.connect()
-
-        // flush the schema cache upon startup
-        this.schemaCache.flushDb()
+    /** Connect and clear schema cache before handling requests (Redis v5 APIs are async). */
+    public async initRedis(): Promise<void> {
+        if (this.redisError) return
+        try {
+            await this.schemaCache.connect()
+            await this.schemaCache.flushDb()
+        } catch {
+            this.redisError = true
+        }
     }
 
     public async getComponentSchema(component: string): Promise<ComponentSchema | string> {
         const ajv = new Ajv({
+            strict: false,
             loadSchema: async (uri: string): Promise<any> => {
                 try {
                     const res = await fetch(uri)
@@ -464,6 +482,15 @@ class DB {
                 }
             }
         })
+
+        ;(formatsPlugin as unknown as (instance: InstanceType<typeof Ajv>) => void)(ajv)
+
+        const defaultSchema: ComponentSchema = {
+            schema: this.defaultSchema,
+            validator: ajv.compile(this.defaultSchema)
+        }
+
+        if (this.schemaSourceIsExplicit) return defaultSchema
 
         if (!this.redisError) {
             const storedSchemaString = await this.schemaCache.get(component)
@@ -486,12 +513,7 @@ class DB {
             console.log("Schema cache is unavailable")
         }
 
-        const defaultSchema = {
-            schema: this.defaultSchema,
-            validator: ajv.compile(this.defaultSchema)
-        }
-
-        if (argv.schemaBaseUrl === undefined) {
+        if (!argv.schemaBaseUrl) {
             if (!argv.requireSchema) return defaultSchema
 
             return "Missing Schema Base Url"
@@ -623,10 +645,12 @@ class DB {
     }
     public async getAll(component: string, query: any, body: any, res: express.Response, parentQuery?: string) {
         try {
+            const reqBody = body ?? {}
+
             let getQuery = `SELECT * FROM ${component}`
             if (!parentQuery) {
-                const userFilter = query.filter ? query.filter : body.filter
-                const userFilter2 = query.filter2 ? query.filter2 : body.filter2
+                const userFilter = query.filter ? query.filter : reqBody.filter
+                const userFilter2 = query.filter2 ? query.filter2 : reqBody.filter2
                 const filter2: string[] = []
                 if (userFilter2) {
                     for (const filterKey of Object.keys(userFilter2)) {
@@ -724,7 +748,7 @@ class DB {
 
             let filteredResponse: any[] = await this.db.query(getQuery)
 
-            const timeMachineQuery = query.timeMachine ? query.timeMachine : body.timeMachine
+            const timeMachineQuery = query.timeMachine ? query.timeMachine : reqBody.timeMachine
 
             if (timeMachineQuery) {
                 let timeMachine: any

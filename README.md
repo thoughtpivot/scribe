@@ -1,11 +1,11 @@
-[![CircleCI](https://circleci.com/gh/ispyhumanfly/scribe/tree/master.svg?style=svg)](https://circleci.com/gh/ispyhumanfly/scribe/tree/master)
-[![Known Vulnerabilities](https://snyk.io/test/github/ispyhumanfly/scribe/badge.svg)](https://snyk.io/test/github/ispyhumanfly/scribe)
-[![npm (scoped)](https://img.shields.io/npm/v/@spytech/scribe.svg)](https://www.npmjs.com/package/@spytech/scribe)
-[![NpmLicense](https://img.shields.io/npm/l/@spytech/scribe.svg)](https://github.com/ispyhumanfly/scribe/blob/master/LICENSE)
+[![CircleCI](https://circleci.com/gh/thoughtpivot/scribe/tree/master.svg?style=svg)](https://circleci.com/gh/thoughtpivot/scribe/tree/master)
+[![Known Vulnerabilities](https://snyk.io/test/github/thoughtpivot/scribe/badge.svg)](https://snyk.io/test/github/thoughtpivot/scribe)
+[![npm (scoped)](https://img.shields.io/npm/v/@thoughtpivot/scribe.svg)](https://www.npmjs.com/package/@thoughtpivot/scribe)
+[![NpmLicense](https://img.shields.io/npm/l/@thoughtpivot/scribe.svg)](https://github.com/thoughtpivot/scribe/blob/master/LICENSE)
 
 # Scribe
 
-Scribe is a data modeling service built around a component-based architecture paradigm, designed to bring structure, reusability, and modularity to backend data systems in the same way that modern frontend frameworks like React or Vue do for UI. While it exposes a RESTful API interface, Scribe is more than just an API server—it’s a flexible framework for modeling domain logic as discrete components and subcomponents, each defined by JSON Schema. These components encapsulate their own validation rules, version history, and relational structure, enabling composable data models that can scale with application complexity. With built-in support for PostgreSQL, Redis caching, dynamic querying, time-based data introspection, and SQL passthroughs, Scribe offers a powerful foundation for building maintainable, schema-driven backends that are easy to reason about and evolve over time.
+Scribe is **ThoughtPivot** technology—a data modeling service built around a component-based architecture paradigm, designed to bring structure, reusability, and modularity to backend data systems in the same way that modern frontend frameworks like React or Vue do for UI. While it exposes a RESTful API interface, Scribe is more than just an API server—it’s a flexible framework for modeling domain logic as discrete components and subcomponents, each defined by JSON Schema. These components encapsulate their own validation rules, version history, and relational structure, enabling composable data models that can scale with application complexity. With built-in support for PostgreSQL, Redis caching, dynamic querying, time-based data introspection, and SQL passthroughs, Scribe offers a powerful foundation for building maintainable, schema-driven backends that are easy to reason about and evolve over time.
 
 ## Project Structure
 
@@ -296,7 +296,7 @@ Every component in Scribe automatically includes these base fields:
 -   Redis (optional, for schema caching)
 
 ```bash
-npm install @spytech/scribe
+npm install @thoughtpivot/scribe
 ```
 
 ## Configuration
@@ -712,3 +712,7 @@ const getRecentActivity = async () => {
 ## License
 
 MIT
+
+## Acknowledgments
+
+Scribe was created with **Flypaper Technologies** and is now maintained as **ThoughtPivot** technology.

@@ -1,23 +1,51 @@
-import "chai-http"
-
-import * as chaiMod from "chai"
+import { assert, expect, use } from "chai"
 import chaiHttp from "chai-http"
+import type { Server } from "http"
 import { DateTime } from "luxon"
 import { createRequire } from "module"
-import { Server } from "net"
+import type { AddressInfo } from "net"
 
 import { createServer, tryCreateDb } from "./scribe.js"
 
-chaiMod.use(chaiHttp)
+/** Chai 6: `use()` returns the augmented instance (including `request` from chai-http). */
+const chai = use(chaiHttp) as Chai.ChaiStatic
 
-const chai = chaiMod as unknown as Chai.ChaiStatic
-const { assert, expect } = chaiMod
+/**
+ * chai-http v5 sets `chai.request` to the request module namespace; URL/app entrypoint is `.execute`.
+ * @param url
+ */
+const serve = (url: string) => (chai.request as unknown as { execute: (app: string) => ChaiHttp.Agent }).execute(url)
 
-/** chai-http exposes request as callable at runtime; DefinitelyTyped omits call signature */
-const serve = chai.request as unknown as (url: string) => ChaiHttp.Agent
-
-const baseEndPoint = "http://localhost:1337"
 let server: Server | undefined
+
+/**
+ *
+ */
+function baseUrl(): string {
+    if (!server) throw new Error("Server not started")
+
+    const addr = server.address()
+    if (addr === null || typeof addr === "string") throw new Error("Unexpected server address")
+
+    const { port } = addr as AddressInfo
+    return `http://127.0.0.1:${port}`
+}
+
+/**
+ * Drops keep-alive sockets so a replacement server can bind before the next request (see PUT with schema change).
+ * @param s
+ */
+function stopHttpServer(s: Server): Promise<void> {
+    return new Promise((resolve) => {
+        if (!s.listening) {
+            resolve()
+            return
+        }
+
+        s.closeAllConnections()
+        s.close(() => resolve())
+    })
+}
 
 const require = createRequire(import.meta.url)
 const schema = require("./default.table.schema.json")
@@ -43,13 +71,17 @@ before(function (done: any) {
 })
 
 after(function (done: any) {
-    server?.close()
-    done()
+    if (!server) {
+        done()
+        return
+    }
+
+    stopHttpServer(server).then(() => done())
 })
 
 describe("Scribe", function () {
     it("Checks that server is running", function (done: any) {
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/")
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.equal(res.status, 200)
@@ -58,7 +90,7 @@ describe("Scribe", function () {
     })
 
     it("DEL component table", function (done: any) {
-        serve(baseEndPoint)
+        serve(baseUrl())
             .del("/testComponent")
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.equal(res.status, 200)
@@ -68,7 +100,7 @@ describe("Scribe", function () {
     })
 
     it("DEL subcomponent table", function (done: any) {
-        serve(baseEndPoint)
+        serve(baseUrl())
             .del("/testComponent/sub")
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.equal(res.status, 200)
@@ -103,7 +135,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .post("/testComponent")
             .send(request)
             .end((err: unknown, res: ChaiHttp.Response) => {
@@ -127,7 +159,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/testComponent/all")
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
@@ -150,7 +182,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/testComponent/all")
             .query({ filter: { created_by: [2] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
@@ -174,7 +206,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/testComponent/all")
             .query({ filter2: { id: ["is one of", [1]] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
@@ -198,7 +230,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/testComponent/all")
             .query({ filter2: { "data.something": ["is one of", "somethingstring"] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
@@ -222,7 +254,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/testComponent/all")
             .query({ filter2: { "data.ids": ["contains", [3]] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
@@ -233,8 +265,8 @@ describe("Scribe", function () {
 
     it("GET all entries with query filter expect none", function (done: any) {
         const expectedResponse: any[] = []
-        serve(baseEndPoint)
-            .get("/testComponent/all")
+        serve(baseUrl())
+            .post("/testComponent/all")
             .send({ filter: { created_by: [3] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
@@ -257,8 +289,8 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
-            .get("/testComponent/all")
+        serve(baseUrl())
+            .post("/testComponent/all")
             .send({ filter: { created_by: [2] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
@@ -281,8 +313,8 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
-            .get("/testComponent/all")
+        serve(baseUrl())
+            .post("/testComponent/all")
             .send({ filter: { "data.something": "somethingstring" } })
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
@@ -292,9 +324,9 @@ describe("Scribe", function () {
 
     it("GET all entries with body filter expect none", function (done: any) {
         const expectedResponse: any[] = []
-        serve(baseEndPoint)
-            .get("/testComponent/all")
-            .query({ filter: { created_by: [3] } })
+        serve(baseUrl())
+            .post("/testComponent/all")
+            .send({ filter: { created_by: [3] } })
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
                 done()
@@ -303,7 +335,7 @@ describe("Scribe", function () {
 
     it("GET from table that doesn't exist should return empty array", function (done: any) {
         const expectedResponse: any[] = []
-        serve(baseEndPoint)
+        serve(baseUrl())
             .get("/someTableThatDoesntExist/all")
             .end((err: unknown, res: ChaiHttp.Response) => {
                 assert.deepEqual(res.body, expectedResponse)
@@ -339,7 +371,7 @@ describe("Scribe", function () {
             }
         ]
 
-        serve(baseEndPoint)
+        serve(baseUrl())
             .put("/testComponent/1")
             .send(request)
             .end((err: unknown, res: ChaiHttp.Response) => {
@@ -348,16 +380,32 @@ describe("Scribe", function () {
             })
     })
 
-    it("PUT with schema change", function (done: any) {
-        server?.close(async () => {
-            const newSchema = schema
-            newSchema.required.push("new_column")
-            newSchema.properties["new_column"] = {
-                type: "string"
-            }
+    it("PUT with schema change", async function () {
+        if (server) await stopHttpServer(server)
 
-            server = await createServer(newSchema)
-            const request = {
+        const newSchema = JSON.parse(JSON.stringify(schema)) as typeof schema
+        newSchema.required.push("new_column")
+        newSchema.properties.new_column = {
+            type: "string"
+        }
+
+        server = await createServer(newSchema)
+
+        const request = {
+            data: {
+                something: "somethingstring",
+                ids: [1, 3, 5]
+            },
+            date_created: created,
+            date_modified: modified,
+            created_by: 2,
+            modified_by: 2,
+            new_column: "woot"
+        }
+
+        const expectedResponse = [
+            {
+                id: 1,
                 data: {
                     something: "somethingstring",
                     ids: [1, 3, 5]
@@ -366,30 +414,26 @@ describe("Scribe", function () {
                 date_modified: modified,
                 created_by: 2,
                 modified_by: 2,
-                new_column: "woot"
+                new_column: '"woot"'
             }
+        ]
 
-            const expectedResponse = [
-                {
-                    id: 1,
-                    data: {
-                        something: "somethingstring",
-                        ids: [1, 3, 5]
-                    },
-                    date_created: created,
-                    date_modified: modified,
-                    created_by: 2,
-                    modified_by: 2,
-                    new_column: '"woot"'
-                }
-            ]
-
-            serve(baseEndPoint)
+        await new Promise<void>((resolve, reject) => {
+            serve(baseUrl())
                 .put("/testComponent/1")
                 .send(request)
                 .end((err: unknown, res: ChaiHttp.Response) => {
-                    assert.deepEqual(res.body, expectedResponse)
-                    done()
+                    if (err) {
+                        reject(err instanceof Error ? err : new Error(String(err)))
+                        return
+                    }
+
+                    try {
+                        assert.deepEqual(res.body, expectedResponse)
+                        resolve()
+                    } catch (e) {
+                        reject(e instanceof Error ? e : new Error(String(e)))
+                    }
                 })
         })
     })

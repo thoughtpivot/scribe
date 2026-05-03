@@ -1,7 +1,7 @@
 {
-    "name": "@spytech/scribe",
-    "version": "1.0.7",
-    "description": "Database modeling services.",
+    "name": "@thoughtpivot/scribe",
+    "version": "1.0.8",
+    "description": "Database modeling services (ThoughtPivot technology).",
     "exports": "./dist/scribe.cli.js",
     "type": "module",
     "engines": {
@@ -16,23 +16,24 @@
     "scripts": {
         "build": "rm -rf dist; node_modules/.bin/tsc --project .; cp ./src/default.table.schema.json ./dist/default.table.schema.json",
         "lint": "eslint .",
-        "test": "TS_NODE_TRANSPILE_ONLY=1 node_modules/.bin/mocha",
+        "test": "SCRIBE_APP_PORT=0 TS_NODE_TRANSPILE_ONLY=1 node_modules/.bin/mocha",
         "start": "node_modules/.bin/ts-node src/scribe.cli.ts"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/ispyhumanfly/scribe.git"
+        "url": "git+https://github.com/thoughtpivot/scribe.git"
     },
     "author": "Logikgate",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/ispyhumanfly/scribe/issues"
+        "url": "https://github.com/thoughtpivot/scribe/issues"
     },
-    "homepage": "https://github.com/ispyhumanfly/scribe#readme",
+    "homepage": "https://github.com/thoughtpivot/scribe#readme",
     "dependencies": {
         "@aws-sdk/rds-signer": "3.1041.0",
         "@redis/client": "^5.12.1",
         "ajv": "8.20.0",
+        "ajv-formats": "^3.0.1",
         "diff-match-patch": "^1.0.5",
         "dotenv": "^17.4.2",
         "express": "5.2.1",
