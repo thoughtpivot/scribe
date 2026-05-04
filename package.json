@@ -35,7 +35,7 @@
         "cluster": "^0.7.7",
         "diff-match-patch": "^1.0.1",
         "dotenv": "^16.4.5",
-        "express": "4.21.2",
+        "express": "4.22.1",
         "express-bunyan-logger": "1.2.0",
         "luxon": "3.4.4",
         "mkdirp": "3.0.1",
