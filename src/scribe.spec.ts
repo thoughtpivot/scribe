@@ -410,4 +410,19 @@ describe("Scribe", function () {
                 })
         })
     })
+
+    it("DEL one entry by id", function (done: any) {
+        chai.request(baseEndPoint)
+            .del("/testComponent/1")
+            .end((err, res) => {
+                assert.equal(res.status, 200)
+                chai.request(baseEndPoint)
+                    .get("/testComponent/1")
+                    .end((getErr, getRes) => {
+                        assert.equal(getRes.status, 200)
+                        expect(getRes.body).to.eql([])
+                        done()
+                    })
+            })
+    })
 })
