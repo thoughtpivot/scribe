@@ -365,6 +365,18 @@ describe("Scribe", function () {
             })
     })
 
+    it("GET entry history", function (done: any) {
+        chai.request(baseEndPoint)
+            .get("/testComponent/1/history")
+            .end((err, res) => {
+                assert.equal(res.status, 200)
+                expect(res.body).to.be.an("array")
+                expect(res.body[0].id).to.equal(1)
+                expect(res.body[0].data.something).to.equal("we changed this")
+                done()
+            })
+    })
+
     it("PUT with schema change", function (done: any) {
         server?.close(async () => {
             const newSchema = schema
