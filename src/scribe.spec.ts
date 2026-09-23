@@ -105,6 +105,46 @@ describe("Scribe", function () {
             })
     })
 
+    it("POST and GET a subcomponent", function (done: any) {
+        const request = {
+            data: {
+                something: "subcomponentstring"
+            },
+            date_created: created,
+            date_modified: modified,
+            created_by: 2,
+            modified_by: 2
+        }
+
+        const expectedResponse = [
+            {
+                id: 1,
+                data: {
+                    something: "subcomponentstring"
+                },
+                date_created: created,
+                date_modified: modified,
+                created_by: 2,
+                modified_by: 2
+            }
+        ]
+
+        chai.request(baseEndPoint)
+            .post("/testComponent/sub")
+            .send(request)
+            .end((err, res) => {
+                assert.equal(res.status, 200)
+                assert.deepEqual(res.body, expectedResponse)
+                chai.request(baseEndPoint)
+                    .get("/testComponent/sub/1")
+                    .end((getErr, getRes) => {
+                        assert.equal(getRes.status, 200)
+                        assert.deepEqual(getRes.body, expectedResponse)
+                        done()
+                    })
+            })
+    })
+
     it("GET all entries", function (done: any) {
         const expectedResponse = [
             {
