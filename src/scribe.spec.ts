@@ -105,6 +105,16 @@ describe("Scribe", function () {
             })
     })
 
+    it("POST rejects a record missing required fields", function (done: any) {
+        chai.request(baseEndPoint)
+            .post("/testComponent")
+            .send({})
+            .end((err, res) => {
+                assert.equal(res.status, 400)
+                done()
+            })
+    })
+
     it("POST and GET a subcomponent", function (done: any) {
         const request = {
             data: {
