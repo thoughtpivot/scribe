@@ -31,7 +31,7 @@
     "dependencies": {
         "@aws-sdk/rds-signer": "3.1041.0",
         "@redis/client": "^1.2.0",
-        "ajv": "6.12.6",
+        "ajv": "6.15.0",
         "cluster": "^0.7.7",
         "diff-match-patch": "^1.0.1",
         "dotenv": "^16.4.5",
