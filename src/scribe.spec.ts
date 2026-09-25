@@ -128,6 +128,30 @@ describe("Scribe", function () {
             })
     })
 
+    it("GET one entry by id", function (done: any) {
+        const expectedResponse = [
+            {
+                id: 1,
+                data: {
+                    something: "somethingstring",
+                    ids: [1, 3, 5]
+                },
+                date_created: created,
+                date_modified: modified,
+                created_by: 2,
+                modified_by: 2
+            }
+        ]
+
+        chai.request(baseEndPoint)
+            .get("/testComponent/1")
+            .end((err, res) => {
+                assert.equal(res.status, 200)
+                assert.deepEqual(res.body, expectedResponse)
+                done()
+            })
+    })
+
     it("GET all entries with query filter", function (done: any) {
         const expectedResponse = [
             {
