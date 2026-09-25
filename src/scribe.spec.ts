@@ -116,6 +116,17 @@ describe("Scribe", function () {
             })
     })
 
+    it("POST sql rejects an empty query", function (done: any) {
+        chai.request(baseEndPoint)
+            .post("/sql")
+            .send({ query: "   " })
+            .end((err, res) => {
+                assert.equal(res.status, 400)
+                expect(res.text).to.equal("Missing query property.")
+                done()
+            })
+    })
+
     it("POST rejects a record missing required fields", function (done: any) {
         chai.request(baseEndPoint)
             .post("/testComponent")
