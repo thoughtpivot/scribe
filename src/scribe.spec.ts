@@ -105,6 +105,17 @@ describe("Scribe", function () {
             })
     })
 
+    it("POST sql runs a query", function (done: any) {
+        chai.request(baseEndPoint)
+            .post("/sql")
+            .send({ query: "SELECT id FROM testcomponent WHERE id = 1" })
+            .end((err, res) => {
+                assert.equal(res.status, 200)
+                expect(res.body).to.eql([{ id: 1 }])
+                done()
+            })
+    })
+
     it("POST rejects a record missing required fields", function (done: any) {
         chai.request(baseEndPoint)
             .post("/testComponent")
