@@ -1,7 +1,7 @@
-[![CircleCI](https://circleci.com/gh/thoughtpivot/scribe/tree/master.svg?style=svg)](https://circleci.com/gh/thoughtpivot/scribe/tree/master)
-[![Known Vulnerabilities](https://snyk.io/test/github/thoughtpivot/scribe/badge.svg)](https://snyk.io/test/github/thoughtpivot/scribe)
-[![npm (scoped)](https://img.shields.io/npm/v/@thoughtpivot/scribe.svg)](https://www.npmjs.com/package/@thoughtpivot/scribe)
-[![NpmLicense](https://img.shields.io/npm/l/@thoughtpivot/scribe.svg)](https://github.com/thoughtpivot/scribe/blob/master/LICENSE)
+[CircleCI](https://circleci.com/gh/thoughtpivot/scribe/tree/master)
+[Known Vulnerabilities](https://snyk.io/test/github/thoughtpivot/scribe)
+[npm (scoped)](https://www.npmjs.com/package/@thoughtpivot/scribe)
+[NpmLicense](https://github.com/thoughtpivot/scribe/blob/master/LICENSE)
 
 # Scribe
 
@@ -35,11 +35,11 @@ In Scribe, a component represents a distinct data model with its own schema, val
 
 Each component in Scribe is defined by a JSON Schema definition that specifies:
 
--   Required fields
--   Data types
--   Validation rules
--   Default values
--   Custom formats
+- Required fields
+- Data types
+- Validation rules
+- Default values
+- Custom formats
 
 For example, a Users component and its Profile subcomponent might be defined as:
 
@@ -169,9 +169,9 @@ POST /users/profile
 
 Components can be:
 
--   **Base Components**: Like `Users` or `Products`
--   **Subcomponents**: Extensions of base components like `Users/Profile` or `Products/Inventory`
--   **Related**: Through parent-child relationships or references
+- **Base Components**: Like `Users` or `Products`
+- **Subcomponents**: Extensions of base components like `Users/Profile` or `Products/Inventory`
+- **Related**: Through parent-child relationships or references
 
 For example, an e-commerce system might be modeled as:
 
@@ -250,50 +250,50 @@ For example, an e-commerce system might be modeled as:
 
 Each component and subcomponent automatically gets:
 
--   Schema validation
--   Version history tracking
--   Relationship querying
--   Time machine capabilities
+- Schema validation
+- Version history tracking
+- Relationship querying
+- Time machine capabilities
 
 This component-based approach makes it natural to:
 
--   Organize complex data models
--   Maintain data integrity
--   Track changes over time
--   Scale your data architecture
+- Organize complex data models
+- Maintain data integrity
+- Track changes over time
+- Scale your data architecture
 
 ### Default Schema Fields
 
 Every component in Scribe automatically includes these base fields:
 
--   `data`: The main component data object
--   `date_created`: Timestamp of creation
--   `date_modified`: Timestamp of last modification
--   `created_by`: ID of the user who created the record
--   `modified_by`: ID of the user who last modified the record
+- `data`: The main component data object
+- `date_created`: Timestamp of creation
+- `date_modified`: Timestamp of last modification
+- `created_by`: ID of the user who created the record
+- `modified_by`: ID of the user who last modified the record
 
 ## Features
 
--   **Schema Validation**: Automatic validation of data against JSON schemas
--   **History Tracking**: Built-in version history for all records
--   **Redis Caching**: Schema caching for improved performance
--   **PostgreSQL Storage**: Reliable and scalable data storage
--   **Complex Queries**: Support for filtering, grouping, and relationships
--   **Time Machine**: Ability to view data as it existed at any point in time
--   **Multi-language Support**: Easy to use from any programming language
--   **Flexible SQL Queries**: Support for complex SQL operations including joins, aggregations, and subqueries
--   **Query Parameter Support**: Easy filtering, sorting, and pagination through URL parameters
--   **Transaction Support**: Atomic operations for data integrity
--   **Dynamic Query Building**: API for constructing complex queries programmatically
--   **Raw SQL Access**: Direct SQL execution for advanced use cases
+- **Schema Validation**: Automatic validation of data against JSON schemas
+- **History Tracking**: Built-in version history for all records
+- **Redis Caching**: Schema caching for improved performance
+- **PostgreSQL Storage**: Reliable and scalable data storage
+- **Complex Queries**: Support for filtering, grouping, and relationships
+- **Time Machine**: Ability to view data as it existed at any point in time
+- **Multi-language Support**: Easy to use from any programming language
+- **Flexible SQL Queries**: Support for complex SQL operations including joins, aggregations, and subqueries
+- **Query Parameter Support**: Easy filtering, sorting, and pagination through URL parameters
+- **Transaction Support**: Atomic operations for data integrity
+- **Dynamic Query Building**: API for constructing complex queries programmatically
+- **Raw SQL Access**: Direct SQL execution for advanced use cases
 
 ## Installation
 
 ### Prerequisites
 
--   Node.js >= 12
--   PostgreSQL >= 9.6.10
--   Redis (optional, for schema caching)
+- Node.js >= 12
+- PostgreSQL >= 9.6.10
+- Redis (optional, for schema caching)
 
 ```bash
 npm install @thoughtpivot/scribe
@@ -693,21 +693,21 @@ const getRecentActivity = async () => {
 
 > **Note**: The SQL endpoint should only be used in trusted environments as it provides direct database access. Make sure to:
 >
-> -   Properly validate and sanitize any user input before using it in queries
-> -   Use parameterized queries to prevent SQL injection
-> -   Consider query performance and add appropriate indexes
-> -   Test queries against your specific PostgreSQL version
+> - Properly validate and sanitize any user input before using it in queries
+> - Use parameterized queries to prevent SQL injection
+> - Consider query performance and add appropriate indexes
+> - Test queries against your specific PostgreSQL version
 
 ## API Endpoints
 
--   `POST /:component` - Create a new record
--   `GET /:component/:id` - Get a record by ID
--   `GET /:component/all` - Get all records
--   `PUT /:component/:id` - Update a record
--   `DELETE /:component/:id` - Delete a record
--   `GET /:component/:id/history` - Get record history
--   `DELETE /:component/all` - Delete all records
--   `DELETE /:component` - Drop the component table
+- `POST /:component` - Create a new record
+- `GET /:component/:id` - Get a record by ID
+- `GET /:component/all` - Get all records
+- `PUT /:component/:id` - Update a record
+- `DELETE /:component/:id` - Delete a record
+- `GET /:component/:id/history` - Get record history
+- `DELETE /:component/all` - Delete all records
+- `DELETE /:component` - Drop the component table
 
 ## License
 
