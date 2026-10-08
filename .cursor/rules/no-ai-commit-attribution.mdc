@@ -1,0 +1,18 @@
+---
+description: Git commits and PRs carry only the human author. Never add AI co-author lines or AI attribution.
+alwaysApply: true
+---
+
+# No AI attribution in git history
+
+Every commit in this repository must be attributed only to the human git user who owns the task (the configured `git config user.name` / `user.email`). AI tools are never credited.
+
+When you write a commit message, squash message, merge message, tag message, or PR title/description:
+
+- NEVER add a `Co-authored-by:` trailer for Cursor, Cursor Agent, cursor[bot], `cursoragent@cursor.com`, Claude, Claude Code, Anthropic, `noreply@anthropic.com`, Copilot, or any other AI tool or bot.
+- NEVER add lines like "Generated with Cursor", "Generated with Claude Code", "🤖 Generated with …", "Made with Cursor", or links to AI tools.
+- NEVER mention Cursor, Claude, or another AI assistant as an author, co-author, or contributor anywhere in git history.
+- Do not change `git config user.name` or `user.email`, and do not pass `--author` to commit as anyone other than the configured user.
+- If a tool or template inserts any of the above, remove it before committing. If you find it in an unpushed commit you made, amend the message to remove it.
+
+Commit messages describe the change itself, written as the human author would write them.
