@@ -1,5 +1,5 @@
 {
-    "name": "@spytech/scribe",
+    "name": "@thoughtpivot/scribe",
     "version": "1.0.7",
     "description": "Database modeling services.",
     "exports": "./dist/scribe.cli.js",
@@ -18,13 +18,16 @@
         "src/errors.ts",
         "src/default.table.schema.json",
         "README.md",
+        "CHANGELOG.md",
         "LICENSE"
     ],
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "provenance": true
     },
     "scripts": {
         "build": "rm -rf dist; node_modules/.bin/tsc --project .; cp ./src/default.table.schema.json ./dist/default.table.schema.json",
+        "prepublishOnly": "npm run build",
         "test": "npm run build && node_modules/.bin/tsc --project tsconfig.test.json && cp ./src/default.table.schema.json ./dist-test/default.table.schema.json && node --test dist-test/routes.test.js",
         "test:bun": "bun test --timeout 30000 src/routes.test.ts src/bun",
         "start": "node_modules/.bin/ts-node src/scribe.cli.ts"

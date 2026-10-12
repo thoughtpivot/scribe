@@ -1,0 +1,82 @@
+name: Release
+
+# After CI succeeds on a push to master, semantic-release tags, updates
+# CHANGELOG.md, publishes @thoughtpivot/scribe, and opens a GitHub release.
+#
+# Auth uses the organization secret NPM_TOKEN directly (no Actions
+# environment). That value is passed as NODE_AUTH_TOKEN (setup-node / npm)
+# and NPM_TOKEN (@semantic-release/npm). id-token: write is for provenance
+# (publishConfig.provenance), not a substitute for the token.
+on:
+    workflow_run:
+        workflows: ["CI"]
+        types: [completed]
+
+concurrency:
+    group: scribe-semantic-release
+    cancel-in-progress: false
+
+permissions:
+    contents: write
+    id-token: write
+
+jobs:
+    release:
+        name: semantic-release
+        if: >
+            github.event.workflow_run.conclusion == 'success' &&
+            github.event.workflow_run.event == 'push' &&
+            github.event.workflow_run.head_branch == 'master'
+        runs-on: ubuntu-latest
+        env:
+            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            GIT_AUTHOR_NAME: Dan Stephenson
+            GIT_AUTHOR_EMAIL: ispyhumanfly@gmail.com
+            GIT_COMMITTER_NAME: Dan Stephenson
+            GIT_COMMITTER_EMAIL: ispyhumanfly@gmail.com
+        steps:
+            - name: Checkout tested commit
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
+                  fetch-depth: 0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22.14.0"
+                  registry-url: https://registry.npmjs.org
+                  cache: npm
+
+            # Provenance statements need a current npm. Node 22.14 ships npm 10.
+            - name: Upgrade npm for provenance
+              run: npm install -g npm@^11.5.1 && npm --version
+
+            - name: Require NPM_TOKEN
+              run: |
+                  if [ -z "${NPM_TOKEN:-}" ] || [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+                    echo "NPM_TOKEN is not set. The organization secret NPM_TOKEN is not available to this repository."
+                    exit 1
+                  fi
+                  echo "NPM_TOKEN is set."
+
+            - name: Install
+              run: npm ci
+
+            - name: Install semantic-release
+              run: |
+                  npm install --prefix "${RUNNER_TEMP}/scribe-release" --save-exact \
+                    semantic-release@25.0.9 \
+                    @semantic-release/changelog@7.0.0 \
+                    @semantic-release/commit-analyzer@13.0.1 \
+                    @semantic-release/git@11.0.1 \
+                    @semantic-release/github@12.0.10 \
+                    @semantic-release/npm@13.2.0 \
+                    @semantic-release/release-notes-generator@14.1.1 \
+                    conventional-changelog-conventionalcommits@10.4.1
+
+            - name: Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: "${RUNNER_TEMP}/scribe-release/node_modules/.bin/semantic-release"

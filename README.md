@@ -1,5 +1,5 @@
-[![CircleCI](https://circleci.com/gh/ispyhumanfly/scribe/tree/master.svg?style=svg)](https://circleci.com/gh/ispyhumanfly/scribe/tree/master)
-[![Known Vulnerabilities](https://snyk.io/test/github/ispyhumanfly/scribe/badge.svg)](https://snyk.io/test/github/ispyhumanfly/scribe)
+[![CI](https://github.com/thoughtpivot/scribe/actions/workflows/ci.yml/badge.svg)](https://github.com/thoughtpivot/scribe/actions/workflows/ci.yml)
+[![Known Vulnerabilities](https://snyk.io/test/github/thoughtpivot/scribe/badge.svg)](https://snyk.io/test/github/thoughtpivot/scribe)
 [![npm (scoped)](https://img.shields.io/npm/v/@thoughtpivot/scribe.svg)](https://www.npmjs.com/package/@thoughtpivot/scribe)
 [![NpmLicense](https://img.shields.io/npm/l/@thoughtpivot/scribe.svg)](https://github.com/thoughtpivot/scribe/blob/master/LICENSE)
 
@@ -294,6 +294,8 @@ npm install @thoughtpivot/scribe
 # or
 yarn add @thoughtpivot/scribe
 ```
+
+This package was previously published as `@spytech/scribe`.
 
 `@thoughtpivot/scribe` is the published package. It ships two binaries:
 
