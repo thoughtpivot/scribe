@@ -27,6 +27,8 @@ my-app/
 └── dist/              # Production build output
 ```
 
+`scribe` and `scribe-bun` discover each `*.schema.json` under `--app_home` at startup and use that file as the component schema. A subcomponent keeps the parent path: `components/Users/Profile/Profile.schema.json` is `Users/Profile`.
+
 ## How Data Components Work
 
 In Scribe, a component represents a distinct data model with its own schema, validation rules, and history tracking. Components are defined using JSON Schema definitions, providing a powerful and flexible way to validate and structure your data on a per component basis.
@@ -381,7 +383,7 @@ bun src/bun/server.ts --port 1337 --mode development
 
 Both commands call `tryCreateDb()` before serving traffic. That creates `SCRIBE_APP_DB_NAME` when the database is not already there.
 
-`npm test` builds, then runs the shared route suite with `node --test` against the Express `scribe` server. `npm run test:bun` runs that same suite with `bun test` against `scribe-bun`, plus the Bun-only checks in `src/bun`.
+`npm test` builds, then runs the shared route suite and schema discovery tests with `node --test` against the Express `scribe` server. `npm run test:bun` runs those same files with `bun test` against `scribe-bun`, plus the Bun-only checks in `src/bun`.
 
 ### Environment variables and options
 
@@ -392,6 +394,8 @@ Scribe loads a `.env` file from the current working directory (`dotenv`). The op
 | `--name`, `-n` | `SCRIBE_APP_NAME` | `HOSTNAME`, or `localhost` | Process name. In production, Node log files use this name. |
 | `--mode`, `-m` | `SCRIBE_APP_MODE` | `NODE_ENV`, or `development` | `production` enables the Node file logger. |
 | `--home`, `-h` | `SCRIBE_APP_HOME` | current working directory | Root for `logs/` and `cache/` on the Node server. |
+| `--app_home`, `--app-home` | `SCRIBE_APP_APP_HOME` | `.` | Application root scanned for `**/*.schema.json`. This is separate from `--home`. |
+| `--exclude_paths`, `--exclude-paths` | `SCRIBE_EXCLUDE_PATHS` | empty | Directories under `--app_home` to skip while discovering schemas. Repeat the flag, or separate entries with commas. |
 | `--port`, `-p` | `SCRIBE_APP_PORT` | `1337` | HTTP listen port. |
 | `--db-host` | `SCRIBE_APP_DB_HOST` | `localhost` | Postgres host. |
 | `--db-port` | `SCRIBE_APP_DB_PORT` | `5432` | Postgres port. |
@@ -408,22 +412,42 @@ Scribe loads a `.env` file from the current working directory (`dotenv`). The op
 | `--schema-base-url` | `SCRIBE_APP_SCHEMA_BASE_URL` | unset | Base URL for schema lookup. |
 | `--require-schema` | `SCRIBE_APP_REQUIRE_SCHEMA` | `false` | Fail a write when a schema cannot be loaded. |
 
-Camel-case flags (`--dbHost`, `--schemaBaseUrl`, and the rest) are the same options as the kebab-case names above.
+Camel-case flags (`--dbHost`, `--schemaBaseUrl`, and the rest) are the same options as the kebab-case names above. `--app_home` and `--exclude_paths` are the Flight-style names; `--app-home` and `--exclude-paths` are the kebab-case aliases.
+
+The option parser also maps `SCRIBE_APP_EXCLUDE_PATHS` onto `--exclude_paths`. `SCRIBE_EXCLUDE_PATHS` is merged with that list, CLI values first. Both accept a comma-separated list.
 
 ### Schema lookup
 
 Schema lookup is part of either server. Pass the same flags to `scribe` and to `scribe-bun`. On a write, both do this:
 
-1. Read the component key from Redis (`--redis-host`, `--redis-port`, `--redis-schema-db`).
-2. On a cache miss, if `--schema-base-url` is set, request `{schemaBaseUrl}/{component}/schema`.
-3. When that URL is unset and `--require-schema` is false, use the built-in default schema.
+1. If a discovered `*.schema.json` matches the component key, use that file. Discovery runs at startup from `--app_home` (default `.`) with fast-glob `**/*.schema.json`. `node_modules` and `.git` are skipped. `--exclude_paths` / `SCRIBE_EXCLUDE_PATHS` skip more directories under that root.
+2. Otherwise read the component key from Redis (`--redis-host`, `--redis-port`, `--redis-schema-db`).
+3. On a cache miss, if `--schema-base-url` is set, request `{schemaBaseUrl}/{component}/schema`.
+4. When no schema is found and `--require-schema` is false, use the built-in default schema.
+
+The component key comes from the schema path. A file named the same as its parent directory drops that repeated segment. When the path contains a `components` directory, the key is everything after the last one, so subcomponents stay nested. Casing is unchanged, and it matches the schema name on the write route (`POST /Users`, `POST /Users/Profile`).
+
+| File under `--app_home` | Component key |
+| --- | --- |
+| `components/Users/Users.schema.json` | `Users` |
+| `components/Users/Profile/Profile.schema.json` | `Users/Profile` |
+| `components/Users/Profile.schema.json` | `Users/Profile` |
 
 Example, either binary:
 
 ```bash
-scribe --schema-base-url http://your-schema-server --require-schema
-scribe-bun --schema-base-url http://your-schema-server --require-schema
+scribe --app_home . --exclude_paths vendor --exclude_paths tmp --schema-base-url http://your-schema-server
+scribe-bun --app_home . --exclude_paths vendor,tmp --schema-base-url http://your-schema-server
 ```
+
+`SCRIBE_EXCLUDE_PATHS` is the same exclude list:
+
+```bash
+SCRIBE_EXCLUDE_PATHS=vendor,tmp scribe --app_home /path/to/app
+SCRIBE_EXCLUDE_PATHS=vendor,tmp scribe-bun --app_home /path/to/app
+```
+
+A discovered file wins over `--schema-base-url`. Components with no schema file still use the remote lookup, then the built-in default, as before.
 
 Or with the environment variable:
 
@@ -458,7 +482,7 @@ If either check fails, the response is HTTP 503. `status` is `unhealthy`, and `d
 
 Every `SCRIBE_APP_*` variable and CLI flag in [Two runtimes](#two-runtimes) applies here, including schema lookup. Bun does not read a second configuration file.
 
-`npm run test:bun` runs `bun test` on `src/routes.test.ts` and `src/bun`. `npm test` runs that same route file on Node after the TypeScript build.
+`npm run test:bun` runs `bun test` on `src/routes.test.ts`, `src/schema-discovery.test.ts`, and `src/bun`. `npm test` runs the route and schema discovery files on Node after the TypeScript build.
 
 ## Usage Examples
 

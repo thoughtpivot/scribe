@@ -14,6 +14,7 @@ import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 
 import { getErrorMessage, isPgPromiseError } from "./errors.js"
+import { configuredExcludePaths, discoverComponentSchemas, resolveAppHome } from "./schema-discovery.js"
 
 dotenv.config()
 
@@ -79,6 +80,19 @@ export const argv = yargs(hideBin(process.argv))
     })
     .option("schemaBaseUrl", {
         type: "string"
+    })
+    .option("app_home", {
+        alias: "app-home",
+        type: "string",
+        default: ".",
+        describe: "Application root scanned for **/*.schema.json"
+    })
+    .option("exclude_paths", {
+        alias: "exclude-paths",
+        type: "array",
+        string: true,
+        default: [] as string[],
+        describe: "Directories under app_home to skip when discovering **/*.schema.json (repeat the flag or pass a comma-separated list)"
     })
     .parseSync()
 
@@ -214,6 +228,8 @@ export async function createCore(schemaOverride: any = undefined): Promise<Scrib
 export class ScribeCore {
     private db: pgPromise.IDatabase<Record<string, never>>
     private defaultSchema: object
+    private discoveredSchemas: Map<string, object>
+    private discoveredValidators: Map<string, ComponentSchema>
     private redisError = false
     private redisStartup: Promise<void> = Promise.resolve()
     private schemaCache: RedisClientType
@@ -221,6 +237,8 @@ export class ScribeCore {
     constructor(db: pgPromise.IDatabase<Record<string, never>>, schemaOverride: any = undefined) {
         this.db = db
         this.defaultSchema = schemaOverride ?? require("./default.table.schema.json")
+        this.discoveredSchemas = discoverComponentSchemas(resolveAppHome(argv.app_home), configuredExcludePaths(argv.exclude_paths))
+        this.discoveredValidators = new Map()
         // @ts-ignore this type sucks
         this.schemaCache = createClient({
             url: `redis://${argv.redisHost}:${argv.redisPort}/${argv.redisSchemaDb}`,
@@ -395,6 +413,30 @@ export class ScribeCore {
                 }
             }
         })
+
+        const discovered = this.discoveredValidators.get(component)
+
+        if (discovered) return discovered
+
+        const rawSchema = this.discoveredSchemas.get(component)
+
+        if (rawSchema) {
+            try {
+                const validator = await ajv.compileAsync(rawSchema)
+                const compiled = {
+                    schema: rawSchema,
+                    validator
+                }
+
+                this.discoveredValidators.set(component, compiled)
+                if (!this.redisError) this.schemaCache.set(component, JSON.stringify(rawSchema))
+
+                return compiled
+            } catch (err) {
+                console.error(err)
+                this.discoveredSchemas.delete(component)
+            }
+        }
 
         if (!this.redisError) {
             const storedSchemaString = await this.schemaCache.get(component)

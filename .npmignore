@@ -4,6 +4,7 @@ src/*
 !src/bun/**
 !src/core.ts
 !src/errors.ts
+!src/schema-discovery.ts
 !src/default.table.schema.json
 .snyk
 .circleci

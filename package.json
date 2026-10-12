@@ -16,6 +16,7 @@
         "src/bun",
         "src/core.ts",
         "src/errors.ts",
+        "src/schema-discovery.ts",
         "src/default.table.schema.json",
         "README.md",
         "CHANGELOG.md",
@@ -28,8 +29,8 @@
     "scripts": {
         "build": "rm -rf dist; node_modules/.bin/tsc --project .; cp ./src/default.table.schema.json ./dist/default.table.schema.json",
         "prepublishOnly": "npm run build",
-        "test": "npm run build && node_modules/.bin/tsc --project tsconfig.test.json && cp ./src/default.table.schema.json ./dist-test/default.table.schema.json && node --test dist-test/routes.test.js",
-        "test:bun": "bun test --timeout 30000 src/routes.test.ts src/bun",
+        "test": "npm run build && node_modules/.bin/tsc --project tsconfig.test.json && cp ./src/default.table.schema.json ./dist-test/default.table.schema.json && node --test dist-test/routes.test.js dist-test/schema-discovery.test.js",
+        "test:bun": "bun test --timeout 30000 src/routes.test.ts src/schema-discovery.test.ts src/bun",
         "start": "node_modules/.bin/ts-node src/scribe.cli.ts"
     },
     "repository": {
@@ -50,6 +51,7 @@
         "dotenv": "^16.4.5",
         "express": "4.22.3",
         "express-bunyan-logger": "1.2.0",
+        "fast-glob": "^3.3.3",
         "luxon": "3.4.4",
         "mkdirp": "3.0.1",
         "pg-promise": "11.10.2",
