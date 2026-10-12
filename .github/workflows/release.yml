@@ -64,6 +64,10 @@ jobs:
             - name: Install
               run: npm ci
 
+            # conventionalcommits@10 requires conventional-changelog-writer@9.
+            # release-notes-generator@14 and commit-analyzer@13 depend on
+            # writer@8 (their tests use conventionalcommits@9.3.1). Preset 10
+            # fails in generateNotes with that writer.
             - name: Install semantic-release
               run: |
                   npm install --prefix "${RUNNER_TEMP}/scribe-release" --save-exact \
@@ -74,7 +78,7 @@ jobs:
                     @semantic-release/github@12.0.10 \
                     @semantic-release/npm@13.2.0 \
                     @semantic-release/release-notes-generator@14.1.1 \
-                    conventional-changelog-conventionalcommits@10.4.1
+                    conventional-changelog-conventionalcommits@9.3.1
 
             - name: Release
               env:
