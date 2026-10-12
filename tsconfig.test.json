@@ -4,6 +4,6 @@
         "outDir": "dist-test",
         "rootDir": "src"
     },
-    "include": ["src/routes.test.ts"],
+    "include": ["src/routes.test.ts", "src/schema-discovery.test.ts"],
     "exclude": ["node_modules", "src/bun"]
 }

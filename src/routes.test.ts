@@ -3,14 +3,15 @@
  *
  * `npm test` runs the compiled file on Node against the Express `scribe` server.
  * `npm run test:bun` runs this source on Bun against `scribe-bun`.
- * Cases here are transport-agnostic (core CRUD, filters, schema reload, and `SCRIBE_APP` options).
+ * Cases here are transport-agnostic (core CRUD, filters, schema reload, schema discovery, and `SCRIBE_APP` options).
  * Bun-only coverage stays in `src/bun`: `GET /healthz` and dependency probes.
  * GET requests that carry a JSON body are Express-only. `Bun.serve` does not expose that body.
  */
 import { DateTime } from "luxon"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import http, { type Server } from "node:http"
+import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { after, before, describe, it } from "node:test"
 import { fileURLToPath } from "node:url"
@@ -346,4 +347,168 @@ describe(`Scribe routes (${transport})`, { concurrency: false }, () => {
 
         assert.deepStrictEqual(res.json, row(original.data, { new_column: '"woot"' }))
     })
+
+    describe("discovered component schemas", () => {
+        const saved: {
+            appHome: unknown
+            excludePaths: unknown
+            schemaBaseUrl: unknown
+            requireSchema: unknown
+        } = {
+            appHome: undefined,
+            excludePaths: undefined,
+            schemaBaseUrl: undefined,
+            requireSchema: undefined
+        }
+
+        let appHome = ""
+        let remote: Server | undefined
+        let hits: string[] = []
+
+        before(async () => {
+            const { argv } = await import("./core.js")
+
+            saved.appHome = argv.app_home
+            saved.excludePaths = argv.exclude_paths
+            saved.schemaBaseUrl = argv.schemaBaseUrl
+            saved.requireSchema = argv.requireSchema
+            appHome = mkdtempSync(join(tmpdir(), "scribe-app-"))
+            writeSchema(appHome, "components/Widget/Widget.schema.json", {
+                type: "object",
+                additionalProperties: false,
+                required: ["data", "nickname"],
+                properties: {
+                    data: { type: "object" },
+                    nickname: { type: "string" }
+                }
+            })
+            writeSchema(appHome, "components/Widget/Part/Part.schema.json", {
+                type: "object",
+                additionalProperties: false,
+                required: ["data", "sku"],
+                properties: {
+                    data: { type: "object" },
+                    sku: { type: "string" }
+                }
+            })
+            writeSchema(appHome, "components/Hidden/Hidden.schema.json", {
+                type: "object",
+                additionalProperties: false,
+                required: ["secret"],
+                properties: {
+                    secret: { type: "string" }
+                }
+            })
+            hits = []
+            const fallbackSchema = readFileSync(schemaPath, "utf8")
+
+            remote = http.createServer((req, res) => {
+                hits.push(req.url ?? "")
+                res.writeHead(200, { "content-type": "application/json" })
+                res.end(fallbackSchema)
+            })
+            const port = await listen(remote)
+
+            argv.app_home = appHome
+            argv.exclude_paths = ["components/Hidden"]
+            argv.schemaBaseUrl = `http://127.0.0.1:${port}`
+            argv.requireSchema = false
+            await boot()
+        })
+
+        after(async () => {
+            const { argv } = await import("./core.js")
+
+            argv.app_home = saved.appHome as typeof argv.app_home
+            argv.exclude_paths = saved.excludePaths as typeof argv.exclude_paths
+            argv.schemaBaseUrl = saved.schemaBaseUrl as typeof argv.schemaBaseUrl
+            argv.requireSchema = saved.requireSchema as typeof argv.requireSchema
+
+            if (remote) {
+                const closing = remote
+
+                remote = undefined
+                await new Promise<void>((resolve, reject) => {
+                    closing.close((err) => (err ? reject(err) : resolve()))
+                })
+            }
+
+            if (appHome) rmSync(appHome, { recursive: true, force: true })
+        })
+
+        it("uses a discovered schema instead of schemaBaseUrl", async () => {
+            const rejected = await call("POST", "/Widget", { data: { a: 1 } })
+
+            assert.equal(rejected.status, 400)
+            assert.match(JSON.stringify(rejected.json), /nickname/)
+
+            const createdRow = await call("POST", "/Widget", { data: { a: 1 }, nickname: "Ada" })
+
+            assert.equal(createdRow.status, 200)
+            const body = createdRow.json as Array<{ nickname: string; data: { a: number } }>
+
+            assert.equal(body[0].nickname, '"Ada"')
+            assert.deepStrictEqual(body[0].data, { a: 1 })
+            assert.deepStrictEqual(hits, [])
+        })
+
+        it("uses a discovered subcomponent schema", async () => {
+            const rejected = await call("POST", "/Widget/Part", { data: { a: 1 } })
+
+            assert.equal(rejected.status, 400)
+            assert.match(JSON.stringify(rejected.json), /sku/)
+
+            const createdRow = await call("POST", "/Widget/Part", { data: { a: 1 }, sku: "A-1" })
+
+            assert.equal(createdRow.status, 200)
+            const body = createdRow.json as Array<{ sku: string }>
+
+            assert.equal(body[0].sku, '"A-1"')
+            assert.deepStrictEqual(hits, [])
+        })
+
+        it("falls back to schemaBaseUrl when the schema file is excluded", async () => {
+            const res = await call("POST", "/Hidden", original)
+            const body = res.json as Array<Record<string, unknown>>
+
+            assert.equal(res.status, 200)
+            assert.equal(body.length, 1)
+            assert.deepStrictEqual(body[0].data, original.data)
+            assert.equal(body[0].created_by, 2)
+            assert.equal(body[0].modified_by, 2)
+            assert.equal(hits.length, 1)
+            assert.match(hits[0], /\/Hidden\/schema$/)
+        })
+    })
 })
+
+/**
+ * @param root
+ * @param rel
+ * @param schema
+ */
+function writeSchema(root: string, rel: string, schema: object): void {
+    const abs = join(root, rel)
+
+    mkdirSync(dirname(abs), { recursive: true })
+    writeFileSync(abs, JSON.stringify(schema))
+}
+
+/**
+ * @param server
+ */
+function listen(server: Server): Promise<number> {
+    return new Promise((resolve, reject) => {
+        server.once("error", reject)
+        server.listen(0, "127.0.0.1", () => {
+            const address = server.address()
+
+            if (address === null || typeof address === "string") {
+                reject(new Error("schema server did not bind"))
+                return
+            }
+
+            resolve(address.port)
+        })
+    })
+}
