@@ -7,6 +7,8 @@ src/*
 !src/default.table.schema.json
 .snyk
 .circleci
+.github
+release.config.cjs
 .eslintrc
 .mailmap
 .prettierrc.json
