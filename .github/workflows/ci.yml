@@ -1,0 +1,78 @@
+name: CI
+
+# Require these checks on the default branch once this workflow is green:
+#   Test (Node 20, Postgres 12)
+#   Test (Node 20, Postgres 16)
+#   Test (Node 22, Postgres 12)
+#   Test (Node 22, Postgres 16)
+
+on:
+    pull_request:
+    push:
+        branches:
+            - master
+            - main
+            - dev
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        name: Test (Node ${{ matrix.node-version }}, Postgres ${{ matrix.postgres-version }})
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                node-version: ['20', '22']
+                postgres-version: ['12', '16']
+        services:
+            postgres:
+                image: postgres:${{ matrix.postgres-version }}
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: postgres
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+            redis:
+                image: redis:7
+                ports:
+                    - 6379:6379
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        env:
+            SCRIBE_APP_DB_HOST: 127.0.0.1
+            SCRIBE_APP_DB_PORT: 5432
+            SCRIBE_APP_DB_USER: postgres
+            SCRIBE_APP_DB_PASS: postgres
+            SCRIBE_APP_DB_NAME: test
+            SCRIBE_APP_REDIS_HOST: 127.0.0.1
+            SCRIBE_APP_REDIS_PORT: 6379
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: npm
+
+            - name: Install
+              run: npm ci
+
+            - name: Build
+              run: npm run build
+
+            - name: Test
+              run: npm test
