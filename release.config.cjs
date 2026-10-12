@@ -28,6 +28,8 @@ module.exports = {
             },
         ],
         [
+            // @semantic-release/npm@13 verifies and publishes with GitHub
+            // OIDC trusted publishing. Leave NPM_TOKEN unset.
             "@semantic-release/npm",
             {
                 npmPublish: true,

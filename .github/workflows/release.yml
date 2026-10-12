@@ -3,10 +3,9 @@ name: Release
 # After CI succeeds on a push to master, semantic-release tags, updates
 # CHANGELOG.md, publishes @thoughtpivot/scribe, and opens a GitHub release.
 #
-# Auth uses the organization secret NPM_TOKEN directly (no Actions
-# environment). That value is passed as NODE_AUTH_TOKEN (setup-node / npm)
-# and NPM_TOKEN (@semantic-release/npm). id-token: write is for provenance
-# (publishConfig.provenance), not a substitute for the token.
+# npm trusted publishing (OIDC) for this repo, workflow release.yml, and no
+# environment. Do not set NPM_TOKEN or NODE_AUTH_TOKEN: a token overrides
+# OIDC and fails with EOTP. id-token: write is how npm authenticates.
 on:
     workflow_run:
         workflows: ["CI"]
@@ -29,8 +28,6 @@ jobs:
             github.event.workflow_run.head_branch == 'master'
         runs-on: ubuntu-latest
         env:
-            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
             GIT_AUTHOR_NAME: Dan Stephenson
             GIT_AUTHOR_EMAIL: ispyhumanfly@gmail.com
             GIT_COMMITTER_NAME: Dan Stephenson
@@ -45,21 +42,22 @@ jobs:
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: "22.14.0"
-                  registry-url: https://registry.npmjs.org
+                  node-version: "22"
                   cache: npm
 
-            # Provenance statements need a current npm. Node 22.14 ships npm 10.
-            - name: Upgrade npm for provenance
-              run: npm install -g npm@^11.5.1 && npm --version
-
-            - name: Require NPM_TOKEN
+            # Trusted publishing needs npm >= 11.5.1. Node 22's bundled npm is older.
+            - name: Upgrade npm
               run: |
-                  if [ -z "${NPM_TOKEN:-}" ] || [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-                    echo "NPM_TOKEN is not set. The organization secret NPM_TOKEN is not available to this repository."
-                    exit 1
-                  fi
-                  echo "NPM_TOKEN is set."
+                  npm i -g npm@latest
+                  npm --version
+                  node --input-type=module -e "
+                  const [maj, min, pat] = process.argv[1].split('.').map(Number);
+                  const ok = maj > 11 || (maj === 11 && (min > 5 || (min === 5 && pat >= 1)));
+                  if (!ok) {
+                    console.error('npm ' + process.argv[1] + ' is older than 11.5.1');
+                    process.exit(1);
+                  }
+                  " "$(npm --version)"
 
             - name: Install
               run: npm ci
@@ -83,4 +81,10 @@ jobs:
             - name: Release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: "${RUNNER_TEMP}/scribe-release/node_modules/.bin/semantic-release"
+              run: |
+                  # A token in the environment or npmrc overrides OIDC and hits EOTP.
+                  unset NPM_TOKEN NODE_AUTH_TOKEN || true
+                  if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "${NPM_CONFIG_USERCONFIG}" ]; then
+                    sed -i '/_authToken/d' "${NPM_CONFIG_USERCONFIG}" || true
+                  fi
+                  "${RUNNER_TEMP}/scribe-release/node_modules/.bin/semantic-release"
