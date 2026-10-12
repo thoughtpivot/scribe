@@ -17,3 +17,4 @@ npm-debug*
 logs
 cache
 dist
+dist-test

@@ -1,3 +1,4 @@
+/** Bun transport only. `GET /healthz` is not an Express route. Shared CRUD lives in `src/routes.test.ts`. */
 import { afterAll, beforeAll, expect, test } from "bun:test"
 import { DateTime } from "luxon"
 

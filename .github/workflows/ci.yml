@@ -5,6 +5,7 @@ name: CI
 #   Test (Node 20, Postgres 16)
 #   Test (Node 22, Postgres 12)
 #   Test (Node 22, Postgres 16)
+#   Test (Bun, Postgres 16)
 
 on:
     pull_request:
@@ -76,3 +77,58 @@ jobs:
 
             - name: Test
               run: npm test
+
+    test-bun:
+        name: Test (Bun, Postgres 16)
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: postgres
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+            redis:
+                image: redis:7
+                ports:
+                    - 6379:6379
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        env:
+            SCRIBE_APP_DB_HOST: 127.0.0.1
+            SCRIBE_APP_DB_PORT: 5432
+            SCRIBE_APP_DB_USER: postgres
+            SCRIBE_APP_DB_PASS: postgres
+            SCRIBE_APP_DB_NAME: test
+            SCRIBE_APP_REDIS_HOST: 127.0.0.1
+            SCRIBE_APP_REDIS_PORT: 6379
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: 1.4.3
+
+            - name: Install
+              run: npm ci
+
+            - name: Test
+              run: npm run test:bun

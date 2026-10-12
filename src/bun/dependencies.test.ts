@@ -1,3 +1,4 @@
+/** Bun-only dependency probes. These import `bun:test` and are not part of the shared route suite. */
 import { afterAll, expect, test } from "bun:test"
 import { mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"

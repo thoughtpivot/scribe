@@ -8,7 +8,6 @@ src/*
 .snyk
 .circleci
 .eslintrc
-.mocharc.json
 .mailmap
 .prettierrc.json
 .vscodeignore
@@ -17,4 +16,6 @@ tsconfig.json
 yarn.lock
 package-lock.json
 *.spec.js
+dist/*.test.js
+dist-test
 *.tgz

@@ -377,9 +377,9 @@ From a clone of this repo:
 bun src/bun/server.ts --port 1337 --mode development
 ```
 
-`npm test` is the Node suite. `npm run test:bun` is the Bun suite.
-
 Both commands call `tryCreateDb()` before serving traffic. That creates `SCRIBE_APP_DB_NAME` when the database is not already there.
+
+`npm test` builds, then runs the shared route suite with `node --test` against the Express `scribe` server. `npm run test:bun` runs that same suite with `bun test` against `scribe-bun`, plus the Bun-only checks in `src/bun`.
 
 ### Environment variables and options
 
@@ -456,7 +456,7 @@ If either check fails, the response is HTTP 503. `status` is `unhealthy`, and `d
 
 Every `SCRIBE_APP_*` variable and CLI flag in [Two runtimes](#two-runtimes) applies here, including schema lookup. Bun does not read a second configuration file.
 
-`npm run test:bun` runs `bun test src/bun/server.test.ts`. `npm test` stays the Node suite.
+`npm run test:bun` runs `bun test` on `src/routes.test.ts` and `src/bun`. `npm test` runs that same route file on Node after the TypeScript build.
 
 ## Usage Examples
 
