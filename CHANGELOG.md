@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0](https://github.com/thoughtpivot/scribe/compare/v1.1.1...v1.2.0) (2026-10-12)
+
+### Features
+
+* discover component schema files (THO-231) ([#75](https://github.com/thoughtpivot/scribe/issues/75)) ([39b7c29](https://github.com/thoughtpivot/scribe/commit/39b7c291b31be5ebff1696638ceef35d67afdd05))
+
 ## [1.1.1](https://github.com/thoughtpivot/scribe/compare/v1.1.0...v1.1.1) (2026-10-12)
 
 ### Bug Fixes
