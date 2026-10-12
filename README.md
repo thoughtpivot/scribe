@@ -383,7 +383,7 @@ bun src/bun/server.ts --port 1337 --mode development
 
 Both commands call `tryCreateDb()` before serving traffic. That creates `SCRIBE_APP_DB_NAME` when the database is not already there.
 
-`npm test` builds, then runs the shared route suite and schema discovery tests with `node --test` against the Express `scribe` server. `npm run test:bun` runs those same files with `bun test` against `scribe-bun`, plus the Bun-only checks in `src/bun`.
+`npm test` builds, then runs the shared route suite, schema discovery tests, and migration runner tests with `node --test` against the Express `scribe` server. `npm run test:bun` runs those same files with `bun test` against `scribe-bun`, plus the Bun-only checks in `src/bun`.
 
 ### Environment variables and options
 
@@ -449,6 +449,12 @@ SCRIBE_EXCLUDE_PATHS=vendor,tmp scribe-bun --app_home /path/to/app
 
 A discovered file wins over `--schema-base-url`. Components with no schema file still use the remote lookup, then the built-in default, as before.
 
+### Migrations
+
+Both servers share one runner, `runMigrations`, from core. It does not import Express.
+
+The runner scans a directory for `*.migration.ts`, `*.migration.js`, and `*.migration.mjs`. It applies pending files in filename order. Each file exports `up(db)`. After `up` succeeds, the runner records that filename in `scribe_migrations`. The filename is the primary key. A later run skips every filename already stored, so it applies zero of those migrations. The table does not store a package version.
+
 Or with the environment variable:
 
 ```bash
@@ -482,7 +488,7 @@ If either check fails, the response is HTTP 503. `status` is `unhealthy`, and `d
 
 Every `SCRIBE_APP_*` variable and CLI flag in [Two runtimes](#two-runtimes) applies here, including schema lookup. Bun does not read a second configuration file.
 
-`npm run test:bun` runs `bun test` on `src/routes.test.ts`, `src/schema-discovery.test.ts`, and `src/bun`. `npm test` runs the route and schema discovery files on Node after the TypeScript build.
+`npm run test:bun` runs `bun test` on `src/routes.test.ts`, `src/schema-discovery.test.ts`, `src/migrations.test.ts`, and `src/bun`. `npm test` runs the route, schema discovery, and migration files on Node after the TypeScript build.
 
 ## Usage Examples
 
