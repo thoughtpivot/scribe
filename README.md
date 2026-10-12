@@ -698,6 +698,12 @@ const getRecentActivity = async () => {
 > -   Consider query performance and add appropriate indexes
 > -   Test queries against your specific PostgreSQL version
 
+## Two runtimes
+
+`scribe` is the Node/Express server. `scribe-bun` (`#!/usr/bin/env bun`) is a single Bun process that serves the same core routes with `Bun.serve`, plus `GET /healthz`.
+
+Install and usage for both binaries will be written up in the Two runtimes docs: [THO-244](https://linear.app/thoughtpivot/issue/THO-244).
+
 ## API Endpoints
 
 -   `POST /:component` - Create a new record

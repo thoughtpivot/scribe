@@ -8,14 +8,25 @@
         "node": "^20.19 || >=22.12"
     },
     "bin": {
-        "scribe": "./dist/scribe.cli.js"
+        "scribe": "./dist/scribe.cli.js",
+        "scribe-bun": "src/bun/server.ts"
     },
+    "files": [
+        "dist",
+        "src/bun",
+        "src/core.ts",
+        "src/errors.ts",
+        "src/default.table.schema.json",
+        "README.md",
+        "LICENSE"
+    ],
     "publishConfig": {
         "access": "public"
     },
     "scripts": {
         "build": "rm -rf dist; node_modules/.bin/tsc --project .; cp ./src/default.table.schema.json ./dist/default.table.schema.json",
         "test": "TS_NODE_TRANSPILE_ONLY=1 node_modules/.bin/mocha",
+        "test:bun": "bun test src/bun/server.test.ts",
         "start": "node_modules/.bin/ts-node src/scribe.cli.ts"
     },
     "repository": {
@@ -41,6 +52,7 @@
         "pg-promise": "11.10.2",
         "pgtools": "1.0.1",
         "pluralize": "8.0.0",
+        "qs": "6.16.0",
         "redis": "4.6.13",
         "sqlstring": "2.3.3",
         "url-join": "5.0.0",
