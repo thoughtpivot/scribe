@@ -1,5 +1,10 @@
 test
-src
+src/*
+!src/bun/
+!src/bun/**
+!src/core.ts
+!src/errors.ts
+!src/default.table.schema.json
 .snyk
 .circleci
 .eslintrc

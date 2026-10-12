@@ -215,6 +215,7 @@ export class ScribeCore {
     private db: pgPromise.IDatabase<Record<string, never>>
     private defaultSchema: object
     private redisError = false
+    private redisStartup: Promise<void> = Promise.resolve()
     private schemaCache: RedisClientType
 
     constructor(db: pgPromise.IDatabase<Record<string, never>>, schemaOverride: any = undefined) {
@@ -236,14 +237,36 @@ export class ScribeCore {
             this.redisError = true
         })
 
-        this.schemaCache.connect()
+        this.redisStartup = this.schemaCache.connect().then(
+            () => undefined,
+            () => undefined
+        )
 
-        // flush the schema cache upon startup
-        this.schemaCache.flushDb()
+        // flush the schema cache upon startup; queued until the socket is up
+        void this.schemaCache.flushDb().catch(() => undefined)
+        this.schemaCache.unref()
     }
 
-    public close(): void {
-        this.db.$pool.end()
+    public close(): Promise<void> {
+        const tasks: Array<Promise<unknown>> = [this.db.$pool.end()]
+        if (this.schemaCache.isOpen) tasks.push(this.schemaCache.quit())
+
+        return Promise.all(tasks).then(
+            () => undefined,
+            (err) => {
+                console.error(err)
+            }
+        )
+    }
+
+    /**
+     * Postgres is always required. Redis is required as well: every process uses it for the schema cache, and nothing turns that off.
+     *
+     * @returns whether each dependency accepted a command
+     */
+    public async health(): Promise<{ db: boolean; redis: boolean }> {
+        const [db, redis] = await Promise.all([this.dbUp(), this.redisUp()])
+        return { db, redis }
     }
 
     /**
@@ -898,6 +921,29 @@ export class ScribeCore {
             console.error(err)
             reply.status(500)
             return "Failed to drop table"
+        }
+    }
+
+    private async dbUp(): Promise<boolean> {
+        try {
+            await this.db.one("SELECT 1 AS ok")
+            return true
+        } catch (err) {
+            console.error(err)
+            return false
+        }
+    }
+
+    private async redisUp(): Promise<boolean> {
+        try {
+            await this.redisStartup
+            if (!this.schemaCache.isOpen) return false
+
+            const pong = await this.schemaCache.ping()
+            return String(pong) === "PONG"
+        } catch (err) {
+            console.error(err)
+            return false
         }
     }
 

@@ -10,5 +10,6 @@
         "allowSyntheticDefaultImports": true,
         "lib": ["es2021", "DOM"]
     },
-    "include": ["src/**/*.ts"]
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "src/bun"]
 }
