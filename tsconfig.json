@@ -11,5 +11,5 @@
         "lib": ["es2021", "DOM"]
     },
     "include": ["src/**/*.ts"],
-        "exclude": ["node_modules", "src/bun", "src/routes.test.ts", "src/schema-discovery.test.ts"]
+        "exclude": ["node_modules", "src/bun", "src/routes.test.ts", "src/schema-discovery.test.ts", "src/migrations.test.ts"]
 }

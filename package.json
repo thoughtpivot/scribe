@@ -17,6 +17,7 @@
         "src/core.ts",
         "src/errors.ts",
         "src/schema-discovery.ts",
+        "src/migrations.ts",
         "src/default.table.schema.json",
         "README.md",
         "CHANGELOG.md",
@@ -29,8 +30,8 @@
     "scripts": {
         "build": "rm -rf dist; node_modules/.bin/tsc --project .; cp ./src/default.table.schema.json ./dist/default.table.schema.json",
         "prepublishOnly": "npm run build",
-        "test": "npm run build && node_modules/.bin/tsc --project tsconfig.test.json && cp ./src/default.table.schema.json ./dist-test/default.table.schema.json && node --test dist-test/routes.test.js dist-test/schema-discovery.test.js",
-        "test:bun": "bun test --timeout 30000 src/routes.test.ts src/schema-discovery.test.ts src/bun",
+        "test": "npm run build && node_modules/.bin/tsc --project tsconfig.test.json && cp ./src/default.table.schema.json ./dist-test/default.table.schema.json && node --test dist-test/routes.test.js dist-test/schema-discovery.test.js dist-test/migrations.test.js",
+        "test:bun": "bun test --timeout 30000 src/routes.test.ts src/schema-discovery.test.ts src/migrations.test.ts src/bun",
         "start": "node_modules/.bin/ts-node src/scribe.cli.ts"
     },
     "repository": {

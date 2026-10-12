@@ -14,7 +14,10 @@ import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 
 import { getErrorMessage, isPgPromiseError } from "./errors.js"
+import { appliedMigrationFilenames, ensureMigrationsTable, runMigrations } from "./migrations.js"
 import { configuredExcludePaths, discoverComponentSchemas, resolveAppHome } from "./schema-discovery.js"
+
+export { appliedMigrationFilenames, ensureMigrationsTable, runMigrations }
 
 dotenv.config()
 
@@ -275,6 +278,15 @@ export class ScribeCore {
                 console.error(err)
             }
         )
+    }
+
+    /**
+     * Apply pending migration files with the core database connection.
+     *
+     * @param directory root that contains migration files
+     */
+    public runMigrations(directory: string): ReturnType<typeof runMigrations> {
+        return runMigrations(this.db, directory)
     }
 
     /**
