@@ -1,7 +1,7 @@
 [![CircleCI](https://circleci.com/gh/ispyhumanfly/scribe/tree/master.svg?style=svg)](https://circleci.com/gh/ispyhumanfly/scribe/tree/master)
 [![Known Vulnerabilities](https://snyk.io/test/github/ispyhumanfly/scribe/badge.svg)](https://snyk.io/test/github/ispyhumanfly/scribe)
-[![npm (scoped)](https://img.shields.io/npm/v/@spytech/scribe.svg)](https://www.npmjs.com/package/@spytech/scribe)
-[![NpmLicense](https://img.shields.io/npm/l/@spytech/scribe.svg)](https://github.com/ispyhumanfly/scribe/blob/master/LICENSE)
+[![npm (scoped)](https://img.shields.io/npm/v/@thoughtpivot/scribe.svg)](https://www.npmjs.com/package/@thoughtpivot/scribe)
+[![NpmLicense](https://img.shields.io/npm/l/@thoughtpivot/scribe.svg)](https://github.com/thoughtpivot/scribe/blob/master/LICENSE)
 
 # Scribe
 
@@ -289,32 +289,174 @@ Every component in Scribe automatically includes these base fields:
 
 ## Installation
 
-### Prerequisites
-
--   Node.js >= 12
--   PostgreSQL >= 9.6.10
--   Redis (optional, for schema caching)
-
 ```bash
-npm install @spytech/scribe
+npm install @thoughtpivot/scribe
+# or
+yarn add @thoughtpivot/scribe
 ```
 
-## Configuration
+`@thoughtpivot/scribe` is the published package. It ships two binaries:
 
-Scribe can be configured through environment variables or command line arguments:
+-   **`scribe`** — Node server. Cluster mode: the primary creates the database, then forks one worker per CPU and replaces a worker that exits.
+-   **`scribe-bun`** — one Bun process (`#!/usr/bin/env bun`). `Bun.serve` handles the same core routes and adds `GET /healthz`.
+
+How to run each, and the shared environment variables and options, are in [Two runtimes](#two-runtimes) and [Bun runtime](#bun-runtime). The same split in [Flight](https://github.com/thoughtpivot/flight#bun-runtime) is the model for these docs.
+
+## Requirements
+
+-   **Node.js** `^20.19 || >=22.12` (the `scribe` binary; this matches `engines` in `package.json`)
+-   **[Bun](https://bun.sh)** (the `scribe-bun` binary and `npm run test:bun`)
+-   **PostgreSQL**
+-   **Redis** (schema cache on both runtimes; `GET /healthz` on Bun requires Postgres and Redis)
+
+## Two runtimes
+
+One package, two entrypoints. Both load the options in `src/core.ts` and talk to the same Postgres database and Redis schema cache. `scribe` is the Node/Express server. `scribe-bun` is the Bun server.
+
+| | `scribe` | `scribe-bun` |
+| --- | --- | --- |
+| Runtime | Node, `node:cluster` | Single Bun process |
+| HTTP | Express | `Bun.serve` |
+| Process model | Primary plus one worker per CPU; a worker that exits is forked again | One process, no cluster |
+| Production logs | `--mode production` writes `{home}/logs/{name}.{pid}.json` | Startup line on stdout |
+| Health | Workers accept traffic on `--port` | `GET /healthz` |
+
+### Run `scribe`
+
+After `npm install @thoughtpivot/scribe`, the binary is `node_modules/.bin/scribe` (`dist/scribe.cli.js`):
 
 ```bash
-# Required
-SCRIBE_APP_DB_HOST=localhost
-SCRIBE_APP_DB_USER=your_user
-SCRIBE_APP_DB_PASS=your_password
-SCRIBE_APP_DB_NAME=your_database
-
-# Optional
-SCRIBE_APP_PORT=1337
-SCRIBE_APP_MODE=development
-SCRIBE_APP_SCHEMA_BASE_URL=http://your-schema-server
+SCRIBE_APP_DB_HOST=localhost \
+SCRIBE_APP_DB_USER=your_user \
+SCRIBE_APP_DB_PASS=your_password \
+SCRIBE_APP_DB_NAME=your_database \
+npx scribe --port 1337 --mode development
 ```
+
+`package.json` scripts:
+
+```json
+{
+    "scripts": {
+        "start": "scribe"
+    }
+}
+```
+
+One-shot, without adding the dependency to the app:
+
+```bash
+npx --yes --package=@thoughtpivot/scribe -- scribe --mode development
+```
+
+Global install (optional): `npm install -g @thoughtpivot/scribe`, then run `scribe` from your PATH.
+
+From a clone of this repo, the published `scribe` bin is the TypeScript build. `npm start` runs `src/scribe.cli.ts` under `ts-node`. `npm run build` writes `dist/`, and `node dist/scribe.cli.js` is the same binary the package publishes.
+
+### Run `scribe-bun`
+
+Bun must be on your PATH. The installed bin is `scribe-bun`:
+
+```bash
+SCRIBE_APP_DB_HOST=localhost \
+SCRIBE_APP_DB_USER=your_user \
+SCRIBE_APP_DB_PASS=your_password \
+SCRIBE_APP_DB_NAME=your_database \
+scribe-bun --port 1337 --mode development
+```
+
+`npx` works when Bun is installed, because the bin's shebang is `#!/usr/bin/env bun`:
+
+```bash
+npx --yes --package=@thoughtpivot/scribe -- scribe-bun --mode development
+```
+
+From a clone of this repo:
+
+```bash
+bun src/bun/server.ts --port 1337 --mode development
+```
+
+`npm test` is the Node suite. `npm run test:bun` is the Bun suite.
+
+Both commands call `tryCreateDb()` before serving traffic. That creates `SCRIBE_APP_DB_NAME` when the database is not already there.
+
+### Environment variables and options
+
+Scribe loads a `.env` file from the current working directory (`dotenv`). The option parser reads variables prefixed with `SCRIBE_APP_` (yargs `.env("SCRIBE_APP")`). A command-line flag overrides the matching variable. The default applies when neither is set.
+
+| CLI | Environment variable | Default | Use |
+| --- | --- | --- | --- |
+| `--name`, `-n` | `SCRIBE_APP_NAME` | `HOSTNAME`, or `localhost` | Process name. In production, Node log files use this name. |
+| `--mode`, `-m` | `SCRIBE_APP_MODE` | `NODE_ENV`, or `development` | `production` enables the Node file logger. |
+| `--home`, `-h` | `SCRIBE_APP_HOME` | current working directory | Root for `logs/` and `cache/` on the Node server. |
+| `--port`, `-p` | `SCRIBE_APP_PORT` | `1337` | HTTP listen port. |
+| `--db-host` | `SCRIBE_APP_DB_HOST` | `localhost` | Postgres host. |
+| `--db-port` | `SCRIBE_APP_DB_PORT` | `5432` | Postgres port. |
+| `--db-user` | `SCRIBE_APP_DB_USER` | empty | Postgres user. |
+| `--db-pass` | `SCRIBE_APP_DB_PASS` | empty | Postgres password. |
+| `--db-name` | `SCRIBE_APP_DB_NAME` | `scribe` | Database name. Created at startup when it is missing. |
+| `--use-ssl` | `SCRIBE_APP_USE_SSL` | `false` | Postgres SSL (`rejectUnauthorized: false`). |
+| `--use-iam-connection` | `SCRIBE_APP_USE_IAM_CONNECTION` | `false` | RDS IAM auth token as the password, with SSL. |
+| `--redis-host` | `SCRIBE_APP_REDIS_HOST` | `127.0.0.1` | Redis host for the schema cache. |
+| `--redis-port` | `SCRIBE_APP_REDIS_PORT` | `6379` | Redis port. |
+| `--redis-schema-db` | `SCRIBE_APP_REDIS_SCHEMA_DB` | `1` | Redis logical database for schemas. |
+| `--redis-reconnect-timeout` | `SCRIBE_APP_REDIS_RECONNECT_TIMEOUT` | `5000` | Redis connect timeout, in milliseconds. |
+| `--payload-limit` | `SCRIBE_APP_PAYLOAD_LIMIT` | `50mb` | JSON body limit (`b`, `kb`, `mb`, `gb`). |
+| `--schema-base-url` | `SCRIBE_APP_SCHEMA_BASE_URL` | unset | Base URL for schema lookup. |
+| `--require-schema` | `SCRIBE_APP_REQUIRE_SCHEMA` | `false` | Fail a write when a schema cannot be loaded. |
+
+Camel-case flags (`--dbHost`, `--schemaBaseUrl`, and the rest) are the same options as the kebab-case names above.
+
+### Schema lookup
+
+Schema lookup is part of either server. Pass the same flags to `scribe` and to `scribe-bun`. On a write, both do this:
+
+1. Read the component key from Redis (`--redis-host`, `--redis-port`, `--redis-schema-db`).
+2. On a cache miss, if `--schema-base-url` is set, request `{schemaBaseUrl}/{component}/schema`.
+3. When that URL is unset and `--require-schema` is false, use the built-in default schema.
+
+Example, either binary:
+
+```bash
+scribe --schema-base-url http://your-schema-server --require-schema
+scribe-bun --schema-base-url http://your-schema-server --require-schema
+```
+
+Or with the environment variable:
+
+```bash
+SCRIBE_APP_SCHEMA_BASE_URL=http://your-schema-server SCRIBE_APP_REQUIRE_SCHEMA=true scribe
+SCRIBE_APP_SCHEMA_BASE_URL=http://your-schema-server SCRIBE_APP_REQUIRE_SCHEMA=true scribe-bun
+```
+
+## Bun runtime
+
+`scribe-bun` is the Bun entry. `npx scribe` stays the Node server. From an installed package:
+
+```bash
+scribe-bun
+```
+
+From a clone of this repo:
+
+```bash
+bun src/bun/server.ts
+```
+
+The Bun server uses `Bun.serve` and loads that TypeScript file directly. It serves the same core routes as the Express transport, in one process, and adds `GET /healthz`.
+
+`GET /healthz` checks Postgres and Redis. Both have to accept a command. A healthy process returns HTTP 200:
+
+```json
+{ "status": "healthy", "db": "up", "redis": "up" }
+```
+
+If either check fails, the response is HTTP 503. `status` is `unhealthy`, and `db` and `redis` are each `up` or `down`.
+
+Every `SCRIBE_APP_*` variable and CLI flag in [Two runtimes](#two-runtimes) applies here, including schema lookup. Bun does not read a second configuration file.
+
+`npm run test:bun` runs `bun test src/bun/server.test.ts`. `npm test` stays the Node suite.
 
 ## Usage Examples
 
@@ -698,14 +840,9 @@ const getRecentActivity = async () => {
 > -   Consider query performance and add appropriate indexes
 > -   Test queries against your specific PostgreSQL version
 
-## Two runtimes
-
-`scribe` is the Node/Express server. `scribe-bun` (`#!/usr/bin/env bun`) is a single Bun process that serves the same core routes with `Bun.serve`, plus `GET /healthz`.
-
-Install and usage for both binaries will be written up in the Two runtimes docs: [THO-244](https://linear.app/thoughtpivot/issue/THO-244).
-
 ## API Endpoints
 
+-   `GET /healthz` - Bun server (`scribe-bun`) only. `200` when Postgres and Redis are up; `503` otherwise. See [Bun runtime](#bun-runtime).
 -   `POST /:component` - Create a new record
 -   `GET /:component/:id` - Get a record by ID
 -   `GET /:component/all` - Get all records
