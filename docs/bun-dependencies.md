@@ -1,6 +1,6 @@
 # Scribe dependencies under Bun
 
-Checked with Bun 1.4.3 against PostgreSQL 16 and Redis 7. `scribe-bun` connects to both for create, read, update, and delete (`src/bun/server.test.ts`). Each library below was exercised from `src/bun/dependencies.test.ts`. Nothing failed, so no dependency was replaced.
+Checked with Bun 1.4.3 against PostgreSQL 16 and Redis 7. `scribe-bun` connects to both for create, read, update, and delete (`src/bun/server.test.ts`). The same route assertions also run from `src/routes.test.ts` on Node and on Bun. Each library below was exercised from `src/bun/dependencies.test.ts`. Nothing failed, so no dependency was replaced.
 
 The Bun transport logs with `console.log` and `console.error`. `express-bunyan-logger` stays on the Express production path and also loads under Bun.
 
