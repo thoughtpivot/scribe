@@ -1,6 +1,6 @@
 {
     "name": "@thoughtpivot/scribe",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Database modeling services.",
     "exports": "./dist/scribe.cli.js",
     "type": "module",

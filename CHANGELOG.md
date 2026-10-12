@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1](https://github.com/thoughtpivot/scribe/compare/v1.1.0...v1.1.1) (2026-10-12)
+
+### Bug Fixes
+
+* publish via npm trusted publishing (OIDC) ([#74](https://github.com/thoughtpivot/scribe/issues/74)) ([60da12b](https://github.com/thoughtpivot/scribe/commit/60da12be5e7dff11e351fb080cb0f637bd278dcd))
+
 ## [1.1.0](https://github.com/thoughtpivot/scribe/compare/v1.0.3...v1.1.0) (2026-10-12)
 
 ### Features
