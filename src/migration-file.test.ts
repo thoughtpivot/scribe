@@ -80,11 +80,21 @@ describe("migration file format", () => {
     })
 })
 
+const cliDb = `scribe_mig_cli_${process.pid}`
+
 describe("migration CLI", { concurrency: false }, () => {
     const directories: string[] = []
 
-    after(() => {
+    after(async () => {
         for (const directory of directories) rmSync(directory, { recursive: true, force: true })
+
+        const pgtools = (await import("pgtools")).default
+
+        try {
+            await pgtools.dropdb(adminConfig(), cliDb)
+        } catch (err) {
+            if ((err as { name?: string }).name !== "invalid_catalog_name") throw err
+        }
     })
 
     it("generate then run applies the stub once", async () => {
@@ -131,7 +141,7 @@ function spawnCli(appHome: string, args: string[]): { status: number | null; std
     const result = spawnSync(command[0], [...command.slice(1), ...args, "--app_home", appHome], {
         cwd: process.cwd(),
         encoding: "utf8",
-        env: process.env,
+        env: { ...process.env, SCRIBE_APP_DB_NAME: cliDb },
         timeout: 20000
     })
 
@@ -145,14 +155,20 @@ function spawnCli(appHome: string, args: string[]): { status: number | null; std
 /**
  *
  */
+function adminConfig(): { host: string; port: number; user: string; password: string } {
+    return {
+        host: process.env.SCRIBE_APP_DB_HOST ?? "127.0.0.1",
+        port: Number(process.env.SCRIBE_APP_DB_PORT ?? 5432),
+        user: process.env.SCRIBE_APP_DB_USER ?? "postgres",
+        password: process.env.SCRIBE_APP_DB_PASS ?? "postgres"
+    }
+}
+
 async function recordedFilenames(): Promise<string[]> {
     const pgPromise = (await import("pg-promise")).default
     const db = pgPromise()({
-        host: process.env.SCRIBE_APP_DB_HOST,
-        port: Number(process.env.SCRIBE_APP_DB_PORT),
-        user: process.env.SCRIBE_APP_DB_USER,
-        password: process.env.SCRIBE_APP_DB_PASS,
-        database: process.env.SCRIBE_APP_DB_NAME
+        ...adminConfig(),
+        database: cliDb
     })
 
     try {

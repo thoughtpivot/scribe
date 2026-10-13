@@ -153,15 +153,31 @@ const dbConnectionConfig = async () => {
 }
 
 /**
- *
+ * Create the application database when it is missing.
+ * A concurrent create of the same name is treated as success.
  */
 export async function tryCreateDb(): Promise<void> {
-    try {
-        const res = await pgtools.createdb(await dbConnectionConfig(), argv.dbName)
-        console.log(res)
-    } catch (err) {
-        const error = err as PgtoolsError
-        if (error.name !== "duplicate_database") throw err
+    for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+            const res = await pgtools.createdb(await dbConnectionConfig(), argv.dbName)
+
+            console.log(res)
+
+            return
+        } catch (err) {
+            const error = err as PgtoolsError
+
+            if (error.name === "duplicate_database" || error.name === "unique_violation") return
+
+            const busy = /template1|being accessed by other users/i.test(error.message)
+
+            if (busy && attempt < 4) {
+                await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)))
+                continue
+            }
+
+            throw err
+        }
     }
 }
 
