@@ -283,6 +283,19 @@ export async function openScribe(schemaOverride: any = undefined, listen: { port
 }
 
 if (import.meta.main) {
-    await tryCreateDb()
-    await openScribe()
+    const command = process.argv[2]
+
+    if (command === "generate" || command === "run") {
+        const { migrationCommand } = await import("../migrations.cli.js")
+
+        try {
+            await migrationCommand(process.argv.slice(2))
+        } catch (error: unknown) {
+            console.error(error instanceof Error ? error.message : error)
+            process.exitCode = 1
+        }
+    } else {
+        await tryCreateDb()
+        await openScribe()
+    }
 }

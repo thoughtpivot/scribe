@@ -23,6 +23,16 @@ dotenv.config()
 
 const get = (p: string, o: any): any => p.split(".").reduce((xs: any, x: any) => (xs && xs[x] ? xs[x] : null), o)
 const require = createRequire(import.meta.url)
+let pgpMain: pgPromise.IMain | undefined
+
+/**
+ * One pg-promise instance for the process.
+ */
+function pgp(): pgPromise.IMain {
+    pgpMain ??= pgPromise({})
+
+    return pgpMain
+}
 
 export const argv = yargs(hideBin(process.argv))
     .env("SCRIBE_APP")
@@ -216,15 +226,18 @@ export function rejectSqlBody(body: any): CoreResponse | undefined {
 }
 
 /**
+ * Open the application database. Callers close `$pool` when they are finished.
+ */
+export async function openDatabase(): Promise<pgPromise.IDatabase<Record<string, never>>> {
+    return pgp()(Object.assign({}, await dbConnectionConfig(), { database: argv.dbName }))
+}
+
+/**
  * @param schemaOverride
  */
 export async function createCore(schemaOverride: any = undefined): Promise<ScribeCore> {
-    const dbConnectConfig = Object.assign({}, await dbConnectionConfig(), {
-        database: argv.dbName
-    })
+    const postgresDb = await openDatabase()
 
-    const pgp: pgPromise.IMain = pgPromise({})
-    const postgresDb: pgPromise.IDatabase<Record<string, never>> = pgp(dbConnectConfig)
     return new ScribeCore(postgresDb, schemaOverride)
 }
 
