@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0](https://github.com/thoughtpivot/scribe/compare/v1.2.0...v1.3.0) (2026-10-13)
+
+### Features
+
+* migrations table and runner (THO-245) ([#76](https://github.com/thoughtpivot/scribe/issues/76)) ([e85a759](https://github.com/thoughtpivot/scribe/commit/e85a7591b1ce10cc62db6e203a3a2dab3765844b))
+
 ## [1.2.0](https://github.com/thoughtpivot/scribe/compare/v1.1.1...v1.2.0) (2026-10-12)
 
 ### Features
