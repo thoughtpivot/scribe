@@ -416,6 +416,24 @@ Camel-case flags (`--dbHost`, `--schemaBaseUrl`, and the rest) are the same opti
 
 The option parser also maps `SCRIBE_APP_EXCLUDE_PATHS` onto `--exclude_paths`. `SCRIBE_EXCLUDE_PATHS` is merged with that list, CLI values first. Both accept a comma-separated list.
 
+### Schema migrations
+
+`scribe migrate` lives in core and the CLI so Node and Bun share the same runner. It does not import Express. Identity is the migration filename, not a semantic-release version.
+
+```bash
+scribe migrate <component> <schema-path> --run
+scribe migrate <component> <schema-path> --generate
+```
+
+1. **Component** is the name Scribe already uses — the Postgres table to convert (`users`, or `Users_Profile` for a subcomponent).
+2. **Schema path** is the JSON Schema the table should match. Scribe compares that document to the live table and writes `{timestamp}.{component}.migration.ts` with `up` / `down` SQL.
+
+`--run` (the default) applies pending files through that SQL path. Already-recorded filenames in the `scribe_migrations` table are skipped, so a re-run applies nothing. `--down` rolls back the last recorded file for that component.
+
+`--generate` writes a complete Flight route, `{component}.migration.backend.ts` (for example `users.migration.backend.ts`). Flight discovers `**/*.backend.ts` and mounts `POST /{component}/migrate`, which calls the same runner.
+
+The same `--db-host`, `--db-name`, and other Postgres flags used by the server apply to `--run`.
+
 ### Schema lookup
 
 Schema lookup is part of either server. Pass the same flags to `scribe` and to `scribe-bun`. On a write, both do this:
