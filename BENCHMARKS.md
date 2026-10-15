@@ -128,4 +128,4 @@ In the throughput files each line is one 20 s run (`Requests/sec`, p50 and p99 l
 
 ## Prior research
 
-Vasilen Lubomirov ([@VasilenL](https://github.com/VasilenL)) did earlier research on running Flight and Scribe on Bun, in [flight-scribe-setup](https://github.com/VasilenL/flight-scribe-setup), [flight-bun](https://github.com/VasilenL/flight-bun) and [scribe-bun](https://github.com/VasilenL/scribe-bun). It was run on separate prototypes and hardware, so its numbers are not comparable with the ones on this page, and none of them are used here. Thank you, Vaso.
+Early Bun research and benchmarks for Flight and Scribe by Vasilen Lyubomirov (github.com/VasilenL), whose work helped start this. The code is in [flight-scribe-setup](https://github.com/VasilenL/flight-scribe-setup), [flight-bun](https://github.com/VasilenL/flight-bun) and [scribe-bun](https://github.com/VasilenL/scribe-bun). It was run on separate prototypes and hardware, so its numbers are not comparable with the ones on this page, and none of them are used here.
