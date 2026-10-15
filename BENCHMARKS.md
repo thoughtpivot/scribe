@@ -2,7 +2,14 @@
 
 This page records how `scribe` (Node, Express on `node:cluster`) and `scribe-bun` (`Bun.serve`) were compared on one commit, and the raw numbers. Scripts and raw output are in [`bench/`](bench/). Run on 2026-10-14.
 
-Read the [caveats](#caveats) before quoting any number. The short version: these are single-table micro-benchmarks, and Scribe writes are limited by per-insert DDL, not by the runtime.
+## Read this first
+
+- Single-core results measure per-core efficiency. They are not a statement about a whole machine.
+- **Scribe writes are DDL-bound.** The shipped create path runs `CREATE TABLE IF NOT EXISTS` twice and `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` on every insert, on both runtimes. That is why writes improve 1.8x while reads improve 4.3x.
+- **On 4 cores reads are a tie** (Node cluster 21,455 vs Bun 22,768 req/s). Postgres on 2 cores is likely the limit. In Flight, the same kind of Bun port loses to a Node cluster on raw hello-route throughput (80.7k vs 53.8k req/s on 4 cores), so do not read the single-core ratios as a general Bun advantage.
+- Reads are `GET /notes/1`, a simple primary-key lookup. They are micro-benchmarks and say little about a real workload.
+- Node's 1.2 s startup includes loading the cluster primary and workers (1.39 s with the default 8 workers).
+- Not measured: end-to-end Flight to Scribe to Postgres with a real SPA, multi-process Bun against a Node cluster, container size and pod cold start, and long soak memory growth. See the full [caveats](#caveats).
 
 ## What was compared
 
@@ -16,7 +23,7 @@ Read the [caveats](#caveats) before quoting any number. The short version: these
 ## Environment
 
 - 8 vCPU Intel Xeon VM, 15 GB RAM, Debian 13, kernel 6.12. It was a shared VM with other processes running, so expect some noise.
-- Node 20.19.2, Bun 1.4.2, PostgreSQL 17.11, Redis 8.0.2, wrk 4.1.0 (load), hyperfine 1.19.0 (timing).
+- Node 20.19.2 (the repo `.nvmrc` says 20.11), Bun 1.4.2 (CI pins 1.4.3), PostgreSQL 17.11, Redis 8.0.2, wrk 4.1.0 (load), hyperfine 1.19.0 (timing).
 - Postgres and Redis ran on the same VM as the server, so there is no network between them.
 
 ## Method
@@ -89,6 +96,9 @@ Single-core numbers measure per-core efficiency. At 4 cores the single `scribe-b
 ## Reproduce
 
 The scripts have no machine-specific paths and no stored credentials. They need Linux with `taskset` and `ss`, [wrk](https://github.com/wg/wrk), [hyperfine](https://github.com/sharkdp/hyperfine), Bun, and a local PostgreSQL and Redis. They start servers on ports 5001-5004.
+
+1. Create a throwaway Postgres database (default name `bench`) and user, and start Redis on `127.0.0.1`. The defaults for host, user, database and Redis host are in `bench/env.sh` and can be overridden.
+2. Build, set the password, and run the scripts:
 
 ```bash
 npm ci && npm run build                 # builds dist/ for the Node variants
