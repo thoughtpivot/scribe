@@ -451,9 +451,34 @@ A discovered file wins over `--schema-base-url`. Components with no schema file 
 
 ### Migrations
 
-Both servers share one runner, `runMigrations`, from core. It does not import Express.
+Migration files use a KNX-style name, `{timestamp}.{component-name}.migration.ts`. The timestamp is UTC `YYYYMMDDHHmmss`, so filename order is chronological. The component name is a lowercase slug: `Users` becomes `users`, and `Users/Profile` becomes `users-profile`.
 
-The runner scans a directory for `*.migration.ts`, `*.migration.js`, and `*.migration.mjs`. It applies pending files in filename order. Each file exports `up(db)`. After `up` succeeds, the runner records that filename in `scribe_migrations`. The filename is the primary key. A later run skips every filename already stored, so it applies zero of those migrations. The table does not store a package version.
+Each file exports `up` and `down`. `up` applies the change. `down` is the inverse. Both receive the database handle (`db.none`, `db.any`, `db.one`, and `db.query`).
+
+```typescript
+export async function up(db) {
+    await db.none("ALTER TABLE users ADD COLUMN IF NOT EXISTS name text")
+}
+
+export async function down(db) {
+    await db.none("ALTER TABLE users DROP COLUMN IF EXISTS name")
+}
+```
+
+Local workflow: generate, review, then run. The same commands work on Node (`scribe`) and Bun (`scribe-bun`). They do not import Express.
+
+```bash
+scribe generate Users
+# review migrations/20261013040506.users.migration.ts
+scribe run
+
+scribe-bun generate Users/Profile --dir migrations
+scribe-bun run --dir migrations
+```
+
+`generate` writes a stub under `migrations/` in `--app_home` (default `.`). `run` applies pending files through the shared runner, in filename order. It calls `up` only. After `up` succeeds, the filename is stored in `scribe_migrations`. That filename is the primary key. A later run skips every filename already stored. The table does not store a package version.
+
+`.migration.js` and `.migration.mjs` files are applied the same way when they export `up`.
 
 Or with the environment variable:
 
@@ -488,7 +513,7 @@ If either check fails, the response is HTTP 503. `status` is `unhealthy`, and `d
 
 Every `SCRIBE_APP_*` variable and CLI flag in [Two runtimes](#two-runtimes) applies here, including schema lookup. Bun does not read a second configuration file.
 
-`npm run test:bun` runs `bun test` on `src/routes.test.ts`, `src/schema-discovery.test.ts`, `src/migrations.test.ts`, and `src/bun`. `npm test` runs the route, schema discovery, and migration files on Node after the TypeScript build.
+`npm run test:bun` runs `bun test` on `src/routes.test.ts`, `src/schema-discovery.test.ts`, `src/migrations.test.ts`, `src/migration-file.test.ts`, and `src/bun`. `npm test` runs those files on Node after the TypeScript build.
 
 ## Usage Examples
 

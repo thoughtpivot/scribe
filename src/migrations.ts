@@ -3,7 +3,7 @@
  * Runtime-neutral: Node (`scribe`) and Bun (`scribe-bun`) both reach this through core.
  * No Express. The filename is the identity. Package versions are not.
  */
-import { existsSync, statSync } from "node:fs"
+import { existsSync, readFileSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
@@ -94,17 +94,48 @@ export function discoverMigrationFiles(directory: string): string[] {
 }
 
 /**
+ * Import a migration module. `.ts` files are transpiled so Node and Bun can both load them.
+ *
+ * @param filePath absolute or relative path
+ */
+export async function importMigration(filePath: string): Promise<{ up?: unknown; down?: unknown }> {
+    const href = filePath.endsWith(".ts") ? compiledMigrationHref(filePath) : pathToFileURL(filePath).href
+
+    return (await import(href)) as { up?: unknown; down?: unknown }
+}
+
+/**
  * Load the `up` function from a migration module.
  *
  * @param filePath absolute or relative path
  */
 export async function loadMigrationUp(filePath: string): Promise<MigrationUp> {
-    const imported = (await import(pathToFileURL(filePath).href)) as { up?: unknown }
+    const imported = await importMigration(filePath)
     const up = imported.up
 
     if (typeof up !== "function") throw new Error(`Migration ${path.basename(filePath)} does not export up`)
 
     return up as MigrationUp
+}
+
+/**
+ * Transpile a TypeScript migration to an ESM data URL.
+ *
+ * @param filePath `.ts` migration path
+ */
+function compiledMigrationHref(filePath: string): string {
+    const ts = require("typescript") as typeof import("typescript")
+    const source = readFileSync(filePath, "utf8")
+    const js = ts.transpileModule(source, {
+        compilerOptions: {
+            module: ts.ModuleKind.ESNext,
+            target: ts.ScriptTarget.ES2021,
+            strict: false
+        },
+        fileName: filePath
+    }).outputText
+
+    return `data:text/javascript;base64,${Buffer.from(js).toString("base64")}`
 }
 
 /**

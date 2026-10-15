@@ -23,6 +23,16 @@ dotenv.config()
 
 const get = (p: string, o: any): any => p.split(".").reduce((xs: any, x: any) => (xs && xs[x] ? xs[x] : null), o)
 const require = createRequire(import.meta.url)
+let pgpMain: pgPromise.IMain | undefined
+
+/**
+ * One pg-promise instance for the process.
+ */
+function pgp(): pgPromise.IMain {
+    pgpMain ??= pgPromise({})
+
+    return pgpMain
+}
 
 export const argv = yargs(hideBin(process.argv))
     .env("SCRIBE_APP")
@@ -143,15 +153,31 @@ const dbConnectionConfig = async () => {
 }
 
 /**
- *
+ * Create the application database when it is missing.
+ * A concurrent create of the same name is treated as success.
  */
 export async function tryCreateDb(): Promise<void> {
-    try {
-        const res = await pgtools.createdb(await dbConnectionConfig(), argv.dbName)
-        console.log(res)
-    } catch (err) {
-        const error = err as PgtoolsError
-        if (error.name !== "duplicate_database") throw err
+    for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+            const res = await pgtools.createdb(await dbConnectionConfig(), argv.dbName)
+
+            console.log(res)
+
+            return
+        } catch (err) {
+            const error = err as PgtoolsError
+
+            if (error.name === "duplicate_database" || error.name === "unique_violation") return
+
+            const busy = /template1|being accessed by other users/i.test(error.message)
+
+            if (busy && attempt < 4) {
+                await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)))
+                continue
+            }
+
+            throw err
+        }
     }
 }
 
@@ -216,15 +242,18 @@ export function rejectSqlBody(body: any): CoreResponse | undefined {
 }
 
 /**
+ * Open the application database. Callers close `$pool` when they are finished.
+ */
+export async function openDatabase(): Promise<pgPromise.IDatabase<Record<string, never>>> {
+    return pgp()(Object.assign({}, await dbConnectionConfig(), { database: argv.dbName }))
+}
+
+/**
  * @param schemaOverride
  */
 export async function createCore(schemaOverride: any = undefined): Promise<ScribeCore> {
-    const dbConnectConfig = Object.assign({}, await dbConnectionConfig(), {
-        database: argv.dbName
-    })
+    const postgresDb = await openDatabase()
 
-    const pgp: pgPromise.IMain = pgPromise({})
-    const postgresDb: pgPromise.IDatabase<Record<string, never>> = pgp(dbConnectConfig)
     return new ScribeCore(postgresDb, schemaOverride)
 }
 
