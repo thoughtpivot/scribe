@@ -7,6 +7,34 @@
 
 Scribe is a data modeling service built around a component-based architecture paradigm, designed to bring structure, reusability, and modularity to backend data systems in the same way that modern frontend frameworks like React or Vue do for UI. While it exposes a RESTful API interface, Scribe is more than just an API server—it’s a flexible framework for modeling domain logic as discrete components and subcomponents, each defined by JSON Schema. These components encapsulate their own validation rules, version history, and relational structure, enabling composable data models that can scale with application complexity. With built-in support for PostgreSQL, Redis caching, dynamic querying, time-based data introspection, and SQL passthroughs, Scribe offers a powerful foundation for building maintainable, schema-driven backends that are easy to reason about and evolve over time.
 
+## ⚡ Now on Bun
+
+`scribe-bun` runs Scribe's shared core on `Bun.serve`. On a single pinned core, at the same commit, compared with the Node `scribe` binary (one notes schema):
+
+| | Node (`scribe`) | Bun (`scribe-bun`) |
+|---|---|---|
+| Reads/s | 4,998 | **21,349** (4.3x) |
+| Read p99 | 52-65 ms | **~12 ms** |
+| Writes/s | 1,273 | **2,327** (1.8x) |
+| Start to first response | 1.21 s | **319 ms** |
+| Idle RSS | 258 MB (primary + 1 worker) | **68 MB** |
+| Test cycle | 10.6 s (tsc + node --test) | **0.87 s** (bun test) |
+
+**What changed:**
+- core logic split from the Express transport
+- a thin `Bun.serve` transport with `GET /healthz`
+- one route suite that runs on both runtimes in CI
+
+Writes are still limited by per-insert schema DDL. Moving it out of the request path is the next item on the roadmap. At 4 cores, reads tie with a 4-worker Node cluster (22.8k vs 21.5k) at about 1/7 the memory. Method and raw data: https://github.com/thoughtpivot/scribe/blob/master/bench/BENCHMARKS.md (scripts in [`bench/`](https://github.com/thoughtpivot/scribe/tree/master/bench)).
+
+`scribe-bun --port 1337`
+
+Early Bun research and benchmarks for Flight and Scribe by Vasilen Lyubomirov ([github.com/VasilenL](https://github.com/VasilenL)), whose work helped start this.
+
+Setup, environment variables and the backend contract: [Bun runtime](#bun-runtime).
+
+#thoughtpivot
+
 ## Project Structure
 
 Scribe assumes your application follows a component-based directory structure:
