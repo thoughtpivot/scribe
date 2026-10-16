@@ -518,6 +518,8 @@ Every `SCRIBE_APP_*` variable and CLI flag in [Two runtimes](#two-runtimes) appl
 
 `npm run test:bun` runs `bun test` on `src/routes.test.ts`, `src/schema-discovery.test.ts`, `src/migrations.test.ts`, and `src/bun`. `npm test` runs the route, schema discovery, and migration files on Node after the TypeScript build.
 
+**Benchmarks:** Bun vs Node method, hardware, raw results and caveats are in [BENCHMARKS.md](BENCHMARKS.md), with the scripts in [`bench/`](bench/).
+
 ## Usage Examples
 
 ### TypeScript with Axios

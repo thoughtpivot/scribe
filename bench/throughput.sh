@@ -3,7 +3,7 @@
 #   reads, 1 core:   bench/throughput.sh sb 5002 1 100 /notes/1
 #   writes, 1 core:  bench/throughput.sh sb 5002 1 50 /notes bench/post.lua
 #   reads, 4 cores:  WRK_CPUS=6-7 bench/throughput.sh sn4 5004 0-3 100 /notes/1
-# Needs Postgres and Redis running locally (see bench/BENCHMARKS.md) and SCRIBE_APP_DB_PASS set.
+# Needs Postgres and Redis running locally (see BENCHMARKS.md) and SCRIBE_APP_DB_PASS set.
 set -u
 name=$1; port=$2; cpus=$3; conns=$4; path=$5; lua=${6:-}
 WRK_CPUS=${WRK_CPUS:-4-7}
