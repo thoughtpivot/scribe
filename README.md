@@ -914,4 +914,4 @@ const getRecentActivity = async () => {
 
 ## License
 
-MIT
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

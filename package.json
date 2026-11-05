@@ -21,7 +21,8 @@
         "src/default.table.schema.json",
         "README.md",
         "CHANGELOG.md",
-        "LICENSE"
+        "LICENSE",
+        "NOTICE"
     ],
     "publishConfig": {
         "access": "public",
@@ -39,7 +40,7 @@
         "url": "git+https://github.com/thoughtpivot/scribe.git"
     },
     "author": "Logikgate",
-    "license": "MIT",
+    "license": "Apache-2.0",
     "bugs": {
         "url": "https://github.com/thoughtpivot/scribe/issues"
     },
