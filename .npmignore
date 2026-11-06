@@ -6,6 +6,8 @@ src/*
 !src/errors.ts
 !src/schema-discovery.ts
 !src/migrations.ts
+!src/migration-file.ts
+!src/migrations.cli.ts
 !src/default.table.schema.json
 .snyk
 .circleci

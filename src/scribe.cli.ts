@@ -1,23 +1,34 @@
 #!/usr/bin/env node
-import cluster from "node:cluster"
-import os from "os"
 
-import { createServer, tryCreateDb } from "./scribe.js"
+const command = process.argv[2]
 
-if (cluster.isPrimary) {
-    tryCreateDb()
-        .then(() => {
-            const cores = os.cpus()
+if (command === "generate" || command === "run") {
+    const { migrationCommand } = await import("./migrations.cli.js")
 
-            for (let i = 0; i < cores.length; i++) cluster.fork()
-
-            cluster.on("exit", (worker) => {
-                cluster.fork()
-            })
-        })
-        .catch((error) => {
-            throw error
-        })
+    migrationCommand(process.argv.slice(2)).catch((error: unknown) => {
+        console.error(error instanceof Error ? error.message : error)
+        process.exitCode = 1
+    })
 } else {
-    createServer()
+    const { default: cluster } = await import("node:cluster")
+    const os = await import("node:os")
+    const { createServer, tryCreateDb } = await import("./scribe.js")
+
+    if (cluster.isPrimary) {
+        tryCreateDb()
+            .then(() => {
+                const cores = os.cpus()
+
+                for (let i = 0; i < cores.length; i++) cluster.fork()
+
+                cluster.on("exit", (worker) => {
+                    cluster.fork()
+                })
+            })
+            .catch((error) => {
+                throw error
+            })
+    } else {
+        createServer()
+    }
 }
